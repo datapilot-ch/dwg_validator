@@ -1,0 +1,4205 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>DWG Bericht</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- MAPS LINKS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@2.2.3/dist/esri-leaflet.js"></script>
+
+<!-- BOOTSTRAP LINKS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js"></script>
+
+<!-- CHARTS LINKS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<!-- FONT LINKS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<!-- STYLES -->
+<style>
+
+
+/* START OF MAP STYLING */
+#mapHTMLReportGenerator {
+        background-color: rgba(41, 49, 58, 0.8);
+        width: 100%;
+        height: 500px;
+    }
+    .legend {
+        padding: 6px 8px;
+        font: 14px Arial, Helvetica, sans-serif;
+        background:rgba(28, 34, 40, 1);
+        line-height: 24px;
+        color: #555;
+    }
+    .legend h4 {
+        text-align: center;
+        font-size: 16px;
+        margin: 2px 12px 8px;
+        color: #777;
+    }
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+    }
+
+/* END OF MAP STYLING */
+
+
+/* STATUS COLORS */
+:root {
+    --color-bestanden: rgba(116, 195, 152, 1); /* Green for "Bestanden" */
+    --color-warnung: rgba(255, 191, 0, 1); /* Yellow for "Warnung" */
+    --color-fehler: rgba(204, 92, 78, 1); /* Red for "Fehler" */
+    --color-info: rgb(113, 139, 189); /* Blue for "Info" */
+    --color-pass-hover: rgba(116, 195, 152, 0.5); /* Lighter green for "Bestanden" hover */
+    --color-warning-hover: rgba(255, 191, 0, 0.5); /* Lighter yellow for "Warnung" hover */
+    --color-error-hover: rgba(204, 92, 78, 0.5); /* Lighter red for "Fehler" hover */
+    --color-info-hover: rgb(146, 161, 189); /* Lighter blue for "Info" */
+    --text-color: rgb(250, 250, 250); /* Blue Text Color */
+
+}
+.pass { border-color: var(--color-bestanden); }
+.warning { border-color: var(--color-warnung); }
+.error { border-color: var(--color-fehler); }
+.info { border-color: var(--color-info); }
+
+.report-item.pass:hover {
+    background-color: var(--color-pass-hover);
+}
+.report-item.warning:hover {
+    background-color: var(--color-warning-hover);
+}
+.report-item.error:hover {
+    background-color: var(--color-error-hover);
+}
+.report-item.info:hover {
+    background-color: var(--color-info-hover);
+}
+
+.info-section p {
+background-color: rgba(41, 49, 58, 0.5);
+padding: 5px 10px; /* Reduced padding for less vertical spacing */
+margin-bottom: 5px; /* Reduced bottom margin for less space between paragraphs */
+border-radius: 5px;
+color: rgba(180, 180, 180, 1);
+font-size: 0.9rem; /* Adjust font size if necessary */
+line-height: 0.8; /* Adjust line height for less space between lines */
+transition: background-color 0.5s ease;
+}
+
+.info-section p:hover {
+background-color: rgba(41, 49, 58, 0.8);
+}
+
+.info-text {
+font-weight: bold;
+color: rgba(250, 250, 250,1);
+}
+
+
+
+
+    body {
+        padding-top: 20px;
+        background-color: rgba(28, 34, 40, 1); /* Dark background */
+        color: rgba(180, 180, 180, 1); /* Lighter text */
+    }
+    a, a:hover {
+        color: rgba(0, 134, 208, 1); /* Links */
+    }
+    .report-container {
+    margin: 20px auto; /* Increased margin for more space around the container */
+    max-width: 1000px; /* Adjusted width for a bit more room */
+    background: rgba(41, 49, 58, 1);
+    padding: 10px; /* More padding inside the container for less cramped content */
+    border-radius: 8px;
+    border: 2px solid rgba(58, 69, 82, 1); /* Adding a border for definition */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* Softening the shadow for a subtle effect */
+    color: rgba(180, 180, 180, 1); /* Lighter text for readability */
+}
+/* Additional styles for modal */
+    .modal-content {
+    background-color: rgba(41,49,58, 1); /* Container Fill color for the modal background */
+    color: rgba(180, 180, 180, 1); /* Adjusting text color for visibility */
+}
+    .report-item {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-left: 5px solid;
+        background-color: rgba(41,49,58, 1); /* Container Fill */
+        cursor: pointer;
+        transition: all 0.75s ease;
+        color: rgba(180, 180, 180, 1); /* TextBody */
+    }
+    .report-item:hover {
+        background-color: rgba(97,142,180,1); /* Container Selected */
+        transform: scale(1.02);
+    }
+    .pass { border-color: rgba(116, 195, 152, 1); }
+    .warning { border-color: rgba(255, 191, 0, 1); }
+    .error { border-color: rgba(204, 92, 78, 1); }
+    .info  { border-color: rgba(89, 139, 189, 1); }
+    .modal-body strong {
+        font-weight: bold;
+        color: rgba(250, 250, 250,1); /* TextSelected */
+    }
+
+        /* This style will change the color of all elements with the class 'close' */
+    .close {
+        color:  rgba(250, 250, 250,1); /* Use your preferred color */
+    }
+
+    /* If you want to change the color on hover as well */
+    .close:hover {
+        color:  rgb(74, 160, 194); /* Lighter color on hover */
+    }
+
+    /* If you want to ensure the lines match the status color, you would first need a way to determine the status */
+    /* Assuming you have a way to set a class or direct style based on the status, it might look something like this: */
+    .modal-status-line {
+        border-top: 1px solid currentColor; /* Use currentColor to automatically use the text color, which is set by the status */
+    }
+
+    /* When you set the status, you would also set the text color, something like this: */
+    .status-pass {
+        color: var(--color-bestanden); /* or the specific rgba value */
+    }
+
+    .status-warning {
+        color: var(--color-warnung); /* or the specific rgba value */
+    }
+
+    .status-info {
+        color: var(--color-info); /* or the specific rgba value */
+    }
+
+
+    .status-error {
+      color: var(--color-fehler); /* or the specific rgba value */
+    }
+
+
+
+
+    .chart-container {
+    max-width: 400px; /* Adjust this value */
+    max-height: 300px; /* And this, as necessary */
+    margin: 80px auto; /* Centers the chart in the column */
+    max-width: 90%; /* Adjust this value based on your preference */
+    display: block; /* Ensures the container is block-level for margin auto to work */
+
+    }
+    
+    .table-rounded {
+        border-collapse: separate; /* Required for tables when using border-radius */
+        border-spacing: 0; /* Removes the spacing between cells */
+        border-radius: 8px; /* Adjust as needed for desired roundness */
+        overflow: hidden; /* Ensures the rounded corners are visible */
+    }
+
+    .table-rounded thead tr:first-child th:first-child {
+        border-top-left-radius: 8px; /* Rounds the top-left corner of the first header */
+    }
+
+    .table-rounded thead tr:first-child th:last-child {
+        border-top-right-radius: 8px; /* Rounds the top-right corner of the last header */
+    }
+
+    .table-rounded tbody tr:last-child td:first-child {
+        border-bottom-left-radius: 8px; /* Rounds the bottom-left corner of the first cell in the last row */
+    }
+
+    .table-rounded tbody tr:last-child td:last-child {
+        border-bottom-right-radius: 8px; /* Rounds the bottom-right corner of the last cell in the last row */
+    }
+
+    .table.table-dark th, .table.table-dark td {
+        padding: 0.5rem; /* Adjust the padding to reduce row height */
+        vertical-align: middle; /* Keeps content vertically centered */
+        line-height: 1; /* Adjusts line height to tighten text spacing if needed */
+    }
+
+
+    .filter-input {
+    background-color: rgba(41,49,58, 1); /* Dark gray background */
+    border-color: #495057; /* Slightly lighter gray for the border for some contrast */
+    color: rgba(250, 250, 250,1); /* White text color for contrast against dark background */
+    padding: .25rem .5rem; /* Smaller padding to reduce overall size */
+    margin-top: .25rem; /* Add a small margin to the top for spacing */
+    margin-bottom: .25rem; /* Add a small margin to the bottom for spacing */
+    line-height: 1.25; /* Adjust line-height for better text alignment */
+    height: calc(1.5em + .5rem + 2px); /* Adjust height to make the input smaller */
+    font-size: .875rem; /* Smaller font size */
+    transition: background-color 0.3s, color 0.3s; /* Smooth transition for background and text color */
+}
+
+.table.table-dark tbody tr th,
+.table.table-dark tbody tr td {
+    font-size: 0.9rem; /* This matches the info-section paragraph text size */
+    color: #ffffff; /* Ensures text color is white for readability */
+}
+
+.filter-input:focus {
+    background-color:rgba(250, 250, 250,1); /* Light blue background on focus */
+    color: #454545; /* White text color on focus */
+    outline: none; /* Removes the default focus outline */
+    border-color: #ffffff; /* Border color to match the background */
+}
+
+/* Removes leaflet Icon in 2d viewer */
+.leaflet-control-attribution {
+    display: none !important;
+}
+
+
+
+
+</style>
+
+</head>
+
+<body>
+
+
+<!-- Hidden form for forcing download -->
+<form id="downloadForm" action="ftp://zimmerli_ftp@212.101.10.236:9899/02_PowerBi/00_PowerBi_Quellen/Excel_Output.xlsx" method="get" style="display: none;">
+</form>
+
+<script>
+function forceDownload() {
+    var form = document.getElementById('downloadForm');
+    form.submit();
+}
+</script>
+
+
+
+
+
+<!-- INITIATE FUNCTIONS HERE -->
+
+<!-- TITLE -->
+<div class="container report-container">
+    <h4 class="mb-4">DWG Auswertung Bericht</h4>
+
+<!-- STATS -->
+<div class="container report-container">
+    <h5 class="mb-4">Info</h5>
+    <div class="info-section">
+        <p id="timestamp">Zeitstempel: <span class="info-text">Laden...</span></p>
+        <p id="totalChecks">Durchgeführte Prüfungen insgesamt: <span class="info-text">Laden...</span></p>
+        <p id="dwgInfo">DWG-Angaben: <span class="info-text">Laden...</span></p>
+        <p id="dwgFileName">DWG Dateiname: <span class="info-text">Laden...</span></p>
+        <p id="roomPolyCount">Anzahl der Zimmer: <span class="info-text">Laden...</span></p>
+        <p id="dwgFloorArea">Gesamtpolygonflachen (m2): <span class="info-text">Laden...</span></p>
+
+        <br>
+        <!-- Downloads Section -->
+        <h5 class="mb-4">Downloads</h5>
+        <p>Excel-Auswertung: <a href="https://kdrive.infomaniak.com/app/share/843734/7b53f675-dc4b-4dd6-9b58-6e36619f00eb" onclick="forceDownload()" class="info-text"><i class="fas fa-download"></i> Herunterladen</a></p>
+        <p>Bearbeitete dwg-Datei: <a href="https://kdrive.infomaniak.com/app/share/843734/b0182b11-bbce-431c-8eff-420ba92f92ff" target="_blank" class="info-text"><i class="fas fa-download"></i> Herunterladen</a></p>
+    </div>
+</div>
+
+<!-- CHARTS TITLE -->
+<div class="container report-container">
+    <h5 class="mb-4">Stats</h5>
+
+<!-- CHARTS ROW -->
+<div class="container-fluid">
+    <div class="row">
+            <!-- First Chart -->
+            <div class="col-md-4 d-flex align-items-center justify-content-center">
+                <div class="chart-container" style="margin: 20px auto;">
+                    <canvas id="firstChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Second Chart -->
+            <div class="col-md-4 d-flex align-items-center justify-content-center">
+                <div class="chart-container" style="margin: 20px auto;">
+                    <canvas id="secondChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Third Chart -->
+            <div class="col-md-4 d-flex align-items-center justify-content-center">
+                <div class="chart-container" style="margin: 30px auto;">
+                    <canvas id="thirdChart"></canvas>
+                </div>
+            </div>
+            </div>
+    </div>
+</div>
+</div>
+
+
+<!-- MAP POSITION IN HTML -->
+<div class="container report-container">
+    <h5 class="mb-4">2D Ansicht</h5>
+    <div class="container report-container">
+<div id="mapHTMLReportGenerator">
+</div>
+</div>
+</div>
+
+<!-- CHECKTABLE -->
+<div class="container report-container">
+    <h5 class="mb-4">Prüfpunkte Checklist</h5>
+
+    <!-- Single Search Input -->
+    <div class="table-search">
+        <input type="text" class="form-control filter-input" placeholder="Filter...">
+    </div>
+
+    <!-- Table -->
+    <table class="table table-dark table-rounded">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Prüfpunkt</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- FME INPUT FOR TABLE OF CHECKS -->
+            
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Datei bewertet', 'Bestanden', 'Datei wurde am 06.06.2024 @ 17h03 ausgewertet', 'https://images4.imagebam.com/1d/54/1a/METRPW2_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/dateispezifikationen/check-1.1')" data-status="pass" data-category="datei">
+                <th scope="row">1.1</th>
+                <td>Datei wurde am 06.06.2024 @ 17h03 ausgewertet</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Beim Parsen der Datei wird die DWG-Version aus den Metadaten gelesen', 'Bestanden', 'Release2013', 'https://images4.imagebam.com/d8/f7/ba/METRPWX_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/dateispezifikationen/check-1.3')" data-status="pass" data-category="datei">
+                <th scope="row">1.3</th>
+                <td>Dwg Version entspricht den Versionsanforderungen: Release2013</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Referenzpunkte innerhalb der Datei', 'Bestanden', 'x: 0, y: 0', 'https://images4.imagebam.com/f9/be/5a/METRPWD_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/zeichnungsmassstab/check-2.1')" data-status="pass" data-category="massstab">
+                <th scope="row">2.1</th>
+                <td>Referenzpunkte gefunden und Koordinaten korrekt</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Referenzpunkte innerhalb der Datei', 'Warnung', 'x: 56.87 != 0, y: 32.9 != 0', 'https://images4.imagebam.com/f9/be/5a/METRPWD_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/zeichnungsmassstab/check-2.1')" data-status="warning" data-category="massstab">
+                <th scope="row">2.1</th>
+                <td>Text der Referenzkoordinaten weicht von den Planungskoordinaten ab</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Zeichnung im Massstab 1:1 in Millimeter', 'Info', 'Feet', 'https://images4.imagebam.com/e8/0e/31/METRPWA_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/zeichnungsmassstab/check-4.1')" data-status="info" data-category="massstab">
+                <th scope="row">4.1</th>
+                <td>Datei IsUnit Scale ist nicht korrekt, aber die Grösse des Plans zeigt Millimeter</td>
+                <td>Info</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Beim Parsen der Datei werden die Schichten offengelegt und aus den Metadaten gelesen', 'Info', 'Ebene in DWG gefunden, aber nicht in den BBL-Richtlinien: <br> A_V0100_G11_SCHNITTLINIE', 'https://images4.imagebam.com/94/d3/05/METRPWF_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/layerstruktur/check-7.1')" data-status="info" data-category="layer">
+                <th scope="row">7.1</th>
+                <td>Ebene in DWG gefunden, aber nicht in den BBL-Richtlinien</td>
+                <td>Info</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Beim Parsen der Datei werden die Schichten offengelegt und aus den Metadaten gelesen', 'Bestanden', 'Ebenenen entsprechen den vordefinierten BBL-CAD-Richtlinien: <br> A_V0100_C1_ACHSE<br>A_V0100_G9_REFERENZ<br>A_E0301_E1_AUSSENFENSTER<br>A_G0300_E1_WANDBEKLEIDUNG<br>A_C0402_E1_TREPPE-RAMPE<br>A_G0101_E1_TRENNWAND<br>R_00104_R5_NGF-STEMPEL<br>R_00103_R1_GF-POLYGON<br>A_D0900_E1_TRANSPORT<br>A_V0100_L6_PLANKOPF<br>A_V0100_G12_SCHRAFFUR-SOLID<br>A_V0100_G12_SCHRAFFUR-MATERIAL<br>A_E0203_E1_FASSADENBEKLEIDUNG<br>A_G0501_E1_EINBAUSCHRANK<br>A_G0502_E1_KUECHE<br>A_E0202_E1_DAEMMUNG<br>A_V0100_L5_NORDPFEIL<br>A_V0100_L7_PLANLEGENDE<br>A_C0300_E2_STUETZE<br>R_00104_R1_NGF-POLYGON<br>A_V0100_L8_PLANRAHMEN<br>A_C0200_E3_WAND<br>A_V0100_I5_100_TEXT<br>A_E0302_E1_AUSSENTUER<br>A_D0800_E1_SANITAER<br>A_G0104_E1_INNENTUER<br>A_C0200_E2_WAND', 'https://images4.imagebam.com/94/d3/05/METRPWF_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/layerstruktur/check-7.1')" data-status="pass" data-category="layer">
+                <th scope="row">7.1</th>
+                <td>Ebenenen entsprechen den vordefinierten BBL-CAD-Richtlinien</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Beim Parsen der Datei werden die Schichten offengelegt und aus den Metadaten gelesen', 'Warnung', 'Es fehlen CAD-Ebenen: <br> A_C0401_E6_UNTERZUG<br>A_D0100_E1_ELEKTRO<br>A_D0700_E1_LUEFTUNG<br>A_V0100_D2_100_MASSE<br>A1Z23---E<br>Defpoints<br>R_00104_R2_ABZUG<br>Z_LEADER_LINE', 'https://images4.imagebam.com/94/d3/05/METRPWF_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/layerstruktur/check-7.1')" data-status="warning" data-category="layer">
+                <th scope="row">7.1</th>
+                <td>Es fehlen CAD-Ebenen</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Raumpolygone müssen geschlossen sein', 'Bestanden', 'Alle Raumpolygone sind geschlossen: \n147', 'https://images4.imagebam.com/aa/d2/c2/METRPWQ_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.1')" data-status="pass" data-category="raum">
+                <th scope="row">15.1</th>
+                <td>Alle Raumpolygone sind geschlossen</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Raumpolygone dürfen keine Bögen enthalten', 'Bestanden', 'Keine Bögen gefunden: \n 147', 'https://images4.imagebam.com/aa/d2/c2/METRPWQ_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.2')" data-status="pass" data-category="raum">
+                <th scope="row">15.2</th>
+                <td>Keine Bögen gefunden</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('1 Polygon pro Raum auf der Ebene R_00104_R1_NGF-POLYGON', 'Warnung', 'Ungleiche Anzahl von Raumstempeln zu Raumpolygonen: 1', 'https://thumbs4.imagebam.com/5a/5b/d2/METRPW4_t.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.3')" data-status="warning" data-category="raum">
+                <th scope="row">15.3</th>
+                <td>Ungleiche Anzahl von Raumstempeln zu Raumpolygonen</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Eine Ebene, die für Raum-Polygone verwendet wird: R_00104_R1_NGF-POLYGON', 'Bestanden', 'R_00104_R1_NGF-POLYGON: 147: 4432.31 m2: ', 'https://images4.imagebam.com/80/54/91/METRPVL_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.4')" data-status="pass" data-category="layer">
+                <th scope="row">15.4</th>
+                <td>Ebene R_00104_R1_NGF-POLYGON gefunden</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Eine Ebene, die für Grundfläche verwendet wird: A1Z23---E-', 'Warnung', 'Grundfläche gefunden, aber falsche Ebene: <br> R_00103_R1_GF-POLYGON: 4771.21m2', 'https://images4.imagebam.com/1f/4e/c9/METRPWS_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.5')" data-status="warning" data-category="geschoss">
+                <th scope="row">15.5</th>
+                <td>Grundfläche gefunden, aber falsche Ebene</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Jeder Raum muss einen Raumstempel enthalten', 'Fehler', 'Raum hat keinen Raumstempel: 1: 0.38m2', 'https://images4.imagebam.com/76/8f/bb/METRPVN_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.1')" data-status="error" data-category="raum">
+                <th scope="row">16.1</th>
+                <td>Raum hat keinen Raumstempel</td>
+                <td>Fehler</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen', 'Fehler', 'AOID weicht von RNR1 ab: <br>Zufahrt: 1502.AA.00.772 != -1.763<br>Parking Auto: 1502.AA.00.762 != -1.762<br>Mofa: 1502.AA.00.768 != 181-186<br>Mofa: 1502.AA.00.767 != 181-193<br>Parking Mofa: 1502.AA.00.763 != -1.761<br>Testing Raum BIR Arbeitsplätze: 1502.AA.00.212 != 00.217<br>Mofa: 1502.AA.00.766 != 175-180<br>WC/Dusche H: 1502.AA.00.908 != 00.417<br>WC/Dusche D: 1502.AA.00.909 != 00.416', 'https://images4.imagebam.com/f3/11/b8/METRPWT_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2')" data-status="error" data-category="raum">
+                <th scope="row">16.2</th>
+                <td>AOID weicht von RNR1 ab</td>
+                <td>Fehler</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen', 'Warnung', 'RNR1 enthält falsche Präfixwerte: <br>Parkplatz: 1502.AA.00.731 != PP 131<br>Parkplatz: 1502.AA.00.732 != PP 132<br>Parkplatz: 1502.AA.00.733 != PP 133<br>Parkplatz: 1502.AA.00.734 != PP 134<br>Parkplatz: 1502.AA.00.735 != PP 135<br>Parkplatz: 1502.AA.00.736 != PP 136<br>Parkplatz: 1502.AA.00.737 != PP 137<br>Parkplatz: 1502.AA.00.738 != PP 138<br>Parkplatz: 1502.AA.00.739 != PP 139<br>Parkplatz: 1502.AA.00.740 != PP 140<br>Parkplatz: 1502.AA.00.743 != PP 143<br>Parkplatz: 1502.AA.00.744 != PP 144<br>Parkplatz: 1502.AA.00.745 != PP 145<br>Parkplatz: 1502.AA.00.746 != PP 146<br>Parkplatz: 1502.AA.00.747 != PP 147<br>Parkplatz: 1502.AA.00.748 != PP 148<br>Parkplatz: 1502.AA.00.749 != PP 149<br>Parkplatz: 1502.AA.00.750 != PP 150<br>Parkplatz: 1502.AA.00.751 != PP 151<br>Parkplatz: 1502.AA.00.752 != PP 152<br>Parkplatz: 1502.AA.00.753 != PP 153<br>Parkplatz: 1502.AA.00.755 != PP 155<br>Parkplatz: 1502.AA.00.756 != PP 156<br>Parkplatz: 1502.AA.00.757 != PP 157<br>Parkplatz: 1502.AA.00.758 != PP 158<br>Parkplatz: 1502.AA.00.759 != PP 159<br>Parkplatz: 1502.AA.00.760 != PP 160<br>Parkplatz: 1502.AA.00.769 != PP 161<br>Parkplatz: 1502.AA.00.770 != PP 162<br>Parkplatz: 1502.AA.00.771 != PP 163<br>Parkplatz: 1502.AA.00.764 != PP 164<br>Parkplatz: 1502.AA.00.765 != PP 165<br>Parkplatz: 1502.AA.00.742 != PP 142<br>Parkplatz: 1502.AA.00.741 != PP 141<br>Parkplatz: 1502.AA.00.754 != PP 154', 'https://images4.imagebam.com/f3/11/b8/METRPWT_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2')" data-status="warning" data-category="raum">
+                <th scope="row">16.2</th>
+                <td>RNR1 enthält falsche Präfixwerte</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Es sollten keine doppelten AOIDs im Plan vorhanden sein', 'Bestanden', 'Keine doppelten AOIDs gefunden: <br>', 'https://images4.imagebam.com/79/2d/cc/METRPWI_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.3')" data-status="pass" data-category="raum">
+                <th scope="row">16.3</th>
+                <td>Keine doppelten AOIDs gefunden</td>
+                <td>Bestanden</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Raum-ID soll Teil des RNR1-Wertes sein', 'Info', 'Räume sind geschlossen oder mehrstöckig und haben keine Eingänge, Raum-ID nicht identisch mit RNR1-Wert: <br>Schacht : 1502.AA.00.901<br>Notstromaggregat : 1502.AA.00.907<br>Schacht : 1502.AA.00.900<br>Schacht : 1502.AA.00.905<br>Schacht : 1502.AA.00.903<br>Schacht : 1502.AA.00.904<br> : ', 'https://images4.imagebam.com/e6/06/c7/METRPWW_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.4')" data-status="info" data-category="raum">
+                <th scope="row">16.4</th>
+                <td>Räume sind geschlossen oder mehrstöckig und haben keine Eingänge, Raum-ID nicht identisch mit RNR1-Wert</td>
+                <td>Info</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <tr data-toggle="modal" data-target="#detailModal" onclick="showDetails('Die Raumfläche entspricht dem Flächenwert des Raum-Polygons', 'Warnung', 'Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>00.665: Korridor: 109.29 m2 != 90.12 m2 -> -19.2 m2<br>: Schacht: 26.27 m2 != 2.74 m2 -> -23.5 m2<br>00.566: Treppenhaus: 15.84 m2 != 15.37 m2 -> -0.5 m2<br>00.420: WC IV: 141.05 m2 != 7.56 m2 -> -133.5 m2<br>00.561: Treppenhaus: 15.41 m2 != 14.94 m2 -> -0.5 m2<br>: :  m2 != 0.38 m2 ->  m2', 'https://images4.imagebam.com/1a/2f/71/METRPWO_o.jpg', 'https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5')" data-status="warning" data-category="raum">
+                <th scope="row">16.5</th>
+                <td>Flächenabweichung zwischen Raumfläche und berechneter Fläche</td>
+                <td>Warnung</td>
+                <td><button class="btn btn-sm btn-secondary">im Detail</button></td>
+            </tr>
+
+
+            <!-- More rows as needed -->
+        </tbody>
+    </table>
+</div>
+
+
+<!-- MODAL POP UP MENU -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-labelledby="modelTitleId" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modelTitleId">Prüfdetails</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Dynamischer Inhalt wird hier geladen -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP -->
+<script>
+
+    
+function showDetails(detail, status, content, imageUrl, wikiUrl) {
+    const modalBody = document.querySelector('.modal-body');
+    const modalContent = document.querySelector('.modal-content');
+    const modalTitle = document.querySelector('.modal-title');
+    const imagePlaceholder = `<img src="${imageUrl}" alt="Image Detail" style="width:25%; margin-top:20px;">`;
+    const wikiLink = `<p>Wiki: <a href="${wikiUrl}" target="_blank">Link</a></p>`;
+
+    // Define a variable to hold the status color
+    let statusColor;
+    
+    // Get the computed style of the root element (HTML document)
+    const rootStyle = getComputedStyle(document.documentElement);
+
+    if (status === 'Bestanden') {
+        statusColor = rootStyle.getPropertyValue('--color-bestanden');
+    } else if (status === 'Warnung') {
+        statusColor = rootStyle.getPropertyValue('--color-warnung');
+    } else if (status === 'Fehler') {
+        statusColor = rootStyle.getPropertyValue('--color-fehler');
+    } else if (status === 'Info') {
+        statusColor = rootStyle.getPropertyValue('--color-info');
+    } else {
+        statusColor = 'rgba(180, 180, 180, 1)'; // Default text color
+    }
+
+    modalTitle.style.color = statusColor;
+
+    modalBody.innerHTML = `
+        ${imagePlaceholder}
+        <p>Status: <strong style="color: ${statusColor};">${status}</strong></p>
+        <p>Detail: <strong>${detail}</strong></p>
+        <p>Inhalt: <strong>${content}</strong></p>
+        ${wikiLink}
+    `;
+    $('#detailModal').modal('show');
+}
+</script>
+
+
+<!-- CHARTS AND INFO -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        
+        
+
+
+        // FME INPUT INFO
+        var timestamp = 'Datei wurde am 06.06.2024 @ 17h03 ausgewertet';
+        var dwgInfo = 'Release2013';
+        var dwgFileName = '1502.AA.0.A00.6A1';
+        var roomPolyCount = '147';
+        var dwgFloorArea = '4432.31';
+
+        document.getElementById('timestamp').getElementsByClassName('info-text')[0].textContent = timestamp;
+        document.getElementById('dwgInfo').getElementsByClassName('info-text')[0].textContent = dwgInfo;
+        document.getElementById('dwgFileName').getElementsByClassName('info-text')[0].textContent = dwgFileName;
+        document.getElementById('roomPolyCount').getElementsByClassName('info-text')[0].textContent = roomPolyCount;
+        document.getElementById('dwgFloorArea').getElementsByClassName('info-text')[0].textContent = dwgFloorArea;
+
+
+        // Count the table rows based on their data-status attribute
+        var passChecks = document.querySelectorAll('tr[data-status="pass"]').length;
+        var warningChecks = document.querySelectorAll('tr[data-status="warning"]').length;
+        var errorChecks = document.querySelectorAll('tr[data-status="error"]').length;
+        var infoChecks = document.querySelectorAll('tr[data-status="info"]').length;
+        var totalChecks = passChecks + warningChecks + errorChecks + infoChecks;
+
+        document.getElementById('totalChecks').getElementsByClassName('info-text')[0].textContent = totalChecks + ' durchgeführte Prüfungen';
+
+        // Aggregate data based on data-category attribute for the second chart
+        const categoryCounts = Array.from(document.querySelectorAll('tr[data-category]')).reduce((acc, row) => {
+            const category = row.getAttribute('data-category');
+            acc[category] = (acc[category] || 0) + 1;
+            return acc;
+        }, {});
+
+        const categoryLabels = Object.keys(categoryCounts);
+        const categoryData = Object.values(categoryCounts);
+
+        //FME AREA INPUT SIA 416
+        // Directly defined SIA 416 Area Data
+        const siaData = {
+        SIA_labels: ['FF','HNF','NNF','VF'],
+        SIA_data: [140.4,1079.3,1260.9,1951.4], // Example counts for each area type
+        };
+
+        // Initialize the first chart
+        var ctxFirstChart = document.getElementById('firstChart').getContext('2d');
+        new Chart(ctxFirstChart, {
+            type: 'doughnut',
+            data: {
+                labels: ['Bestanden', 'Warnung', 'Fehler', 'Info'],
+                datasets: [{
+                    label: 'Status',
+                    data: [passChecks, warningChecks, errorChecks, infoChecks],
+                    backgroundColor: [
+                        'rgba(116, 195, 152, 0.7)',
+                        'rgba(255, 191, 0, 0.7)',
+                        'rgba(204, 92, 78, 0.7)',
+                        'rgba(113, 139, 189, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(116, 195, 152, 1)',
+                        'rgba(255, 191, 0, 1)',
+                        'rgba(204, 92, 78, 1)',
+                        'rgba(113, 139, 189, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '85%', // Adjusting cutout percentage to achieve the desired ring thickness
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels:{
+                            color: '#A0A0A0',
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Übersicht',
+                        color: '#ffffff',
+                        align: 'start', 
+                    },
+                    datalabels: {
+      color: 'white', // Set the text color to white
+      anchor: 'center', // Position labels in the center of each segment
+      align: 'center', // Center align text
+      font: {
+        weight: 'bold', // Optional: make text bold
+        size: 14, // Set font size
+      },}
+                }
+            }
+        });
+
+        // Initialize the second chart
+        var ctxSecondChart = document.getElementById('secondChart').getContext('2d');
+new Chart(ctxSecondChart, {
+    type: 'doughnut',
+    data: {
+        labels: categoryLabels,
+        datasets: [{
+            label: 'Kategorien',
+            data: categoryData,
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)'
+            ],
+            borderColor: [
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        cutout: '85%', // Adjusting cutout percentage to achieve the desired ring thickness
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels:{
+                            color: '#A0A0A0',
+                        } 
+            },
+            title: {
+                display: true,
+                text: 'Verteilung der Prüfpunkte Kategorien',
+                color: '#ffffff',
+                align: 'start', 
+            }
+        }
+    }
+});
+
+
+// Function to map attribute values to colors
+function getColorByAttribute(attributeValue) {
+    const colorMapping = {
+        "HNF": 'rgba(192, 0, 0, 0.7)',
+        "NNF": 'rgba(247, 150, 70, 0.7)',
+        "VF": 'rgba(255, 255, 0, 0.7)',
+        "FF": 'rgba(0, 176, 240, 0.7)',
+        // Add more mappings as needed
+    };
+    return colorMapping[attributeValue] || 'rgba(180, 180, 180, 0.7)'; // Default color if no match found
+}
+
+// Generate color arrays dynamically
+var backgroundColors = siaData.SIA_labels.map(label => getColorByAttribute(label));
+var borderColors = siaData.SIA_labels.map(label => getColorByAttribute(label)); // Assuming border and background colors are the same
+
+
+
+        // Initialize the third chart
+        var ctxThirdChart = document.getElementById('thirdChart').getContext('2d');
+    new Chart(ctxThirdChart, {
+        type: 'doughnut',
+        data: {
+            labels: siaData.SIA_labels,
+            datasets: [{
+                label: 'SIA 416 Flächenverteilung (m2)',
+                data: siaData.SIA_data,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '85%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels:{
+                            color: '#A0A0A0',
+                            
+                        }
+                    
+                },
+                title: {
+                    display: true,
+                    text: 'SIA 416 Flächenverteilung',
+                    color: '#ffffff',
+                    align: 'start', 
+                }
+            }
+        }
+    });
+    }, 200); // End of delay (1200ms)
+});
+
+
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('.container.report-container table tbody tr');
+
+    rows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            const status = this.getAttribute('data-status');
+            switch(status) {
+                case 'pass':
+                    this.style.backgroundColor = 'var(--color-pass-hover)';
+                    break;
+                case 'warning':
+                    this.style.backgroundColor = 'var(--color-warning-hover)';
+                    break;
+                case 'error':
+                    this.style.backgroundColor = 'var(--color-error-hover)';
+                    break;
+                case 'info':
+                    this.style.backgroundColor = 'var(--color-info-hover)';
+                    break;
+                default:
+                    this.style.backgroundColor = ''; // Fallback color if needed
+            }
+        });
+
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = ''; // Reset background color on mouse leave
+        });
+    });
+});
+
+</script>
+
+
+<!-- SEARCH BAR -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const inputElement = document.querySelector(".filter-input");
+    inputElement.addEventListener("keyup", function() {
+        let filterValue = this.value.toUpperCase().trim();
+        let table = document.querySelector(".table");
+        let rows = table.querySelectorAll("tbody tr");
+
+  // Loop through all rows, and hide those that don't match the search query
+  rows.forEach(function(row) {
+            // Get all cells in the row
+            let cells = row.querySelectorAll("td, th");
+            let rowText = "";
+            cells.forEach(function(cell) {
+                rowText += cell.textContent || cell.innerText;
+            });
+            // Check if the concatenated text of all cells contains the search term
+            if (rowText.toUpperCase().indexOf(filterValue) > -1) {
+                row.style.display = ""; // The row matches the query
+            } else {
+                row.style.display = "none"; // The row doesn't match the query
+            }
+        });
+    });
+});
+    </script>
+
+<!-- INITIATE MAP SCRIPT -->
+<script>
+    var map = L.map('mapHTMLReportGenerator', {
+        zoomControl: true
+    }).setView([0, 0], 3);
+
+  // Define colors for each type of feature in the legend
+  var featureColors = {
+          "FF": "#00b0f0",
+          "HNF": "#c00000",
+          "NNF": "#f79646",
+          "VF": "#ffff00",
+          
+          "info": "#FFFFFF",
+          "warning": "#00FFFF",
+          "error": "#FF00FF"
+      };
+
+    // Optionally add base map layer here if desired
+
+// Legend that uses the featureColors object to display items
+var legend = L.control({position: 'bottomleft'});
+  legend.onAdd = function(map) {
+      var div = L.DomUtil.create('div', 'legend');
+      div.innerHTML += "<h4>SIA 416 Legende</h4>";
+      for (var type in featureColors) {
+          div.innerHTML += '<i style="background: ' + featureColors[type] + ';"></i>' + type + '<br>';
+      }
+      return div;
+  };
+  legend.addTo(map);
+
+
+       map.createPane("labels");
+       var layer = L.geoJson({
+             // Your FME GeoJSON object
+"type": "FeatureCollection",
+"features": [
+
+// ADD FME GEOMTERY HERE
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 181</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:3.29m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[61.68,9.1],[61.68,6.62],[62.98,6.62],[62.98,9.1],[62.98,9.155],[61.78,9.155],[61.78,9.1],[61.68,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 314</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:36.89m2</li>" +
+                  "<li>Raumbez.: Büromateriallager BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[35.51,49.21],[45.33,49.21],[45.33,45.48],[37.89,45.48],[37.89,45.3],[36.41,45.3],[36.41,45.48],[35.51,45.48],[35.51,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 570</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:60.19m2</li>" +
+                  "<li>Raumbez.: Foyer</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Hartbeton geschliffen</li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: Gipsglattstrich / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.08,33.47],[19.34,33.47],[19.34,21.822],[22.3,21.822],[22.3,22.662],[22.3,24.222],[25.08,24.222],[25.08,33.47]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 682</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.82m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.87,19.48],[59.75,19.48],[59.75,21.5],[56.87,21.5],[56.87,19.48]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 901</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:2.16m2</li>" +
+                  "<li>Raumbez.: Schacht</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[73.315,22.535],[72.715,22.535],[72.715,18.935],[73.315,18.935],[73.315,22.535]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 211</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:20.44m2</li>" +
+                  "<li>Raumbez.: Lagerraum BBL OM</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Boden roh (Fremdnutzer)</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[55.675,49.21],[61.156,49.21],[61.156,45.48],[55.676,45.48],[55.675,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 900</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:26.27m2</li>" +
+                  "<li>Raumbez.: Schacht</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.42,26.11],[25.62,26.11],[25.62,22.292],[26.19,22.292],[26.19,18.11],[26.48,18.11],[26.48,17.94],[25.99,17.94],[24.73,17.94],[24.73,18.11],[25.57,18.11],[25.57,21.842],[25.77,21.842],[25.77,17.94],[25.99,17.94],[25.99,22.062],[25.42,22.062],[25.42,26.11]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 161</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:13.49m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Kalksandstein</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[60.05,10.62],[60.05,10.94],[59.75,10.94],[59.75,12.07],[60.05,12.07],[60.05,12.2],[63.08,12.2],[63.08,11.93],[62.925,11.93],[62.925,11.63],[63.08,11.63],[63.08,9.32],[62.98,9.32],[62.98,9.3],[61.78,9.3],[61.78,9.32],[61.25,9.32],[61.25,9.3],[60.05,9.3],[60.05,9.32],[56.65,9.32],[56.65,10.62],[60.05,10.62]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 761</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:71.76m2</li>" +
+                  "<li>Raumbez.: Korridor Verbindung Etappe 2+3 </li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[61.336,45.48],[61.336,66.3],[64.686,66.3],[64.686,49.21],[65.225,49.21],[65.225,45.48],[61.336,45.48]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 681</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:8.32m2</li>" +
+                  "<li>Raumbez.: Elektro</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 20</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.87,19.3],[59.75,19.3],[59.75,16.41],[56.87,16.41],[56.87,19.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 662</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.2m2</li>" +
+                  "<li>Raumbez.: Lift Waren</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[59.75,32.9],[56.87,32.9],[56.87,30.4],[59.75,30.4],[59.75,32.9]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 905</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:0.34m2</li>" +
+                  "<li>Raumbez.: Schacht</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[1.63,40.325],[1.63,39.35],[1.98,39.35],[1.98,40.325],[1.63,40.325]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 121</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.19m2</li>" +
+                  "<li>Raumbez.: Haustechnik</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[61.68,9.1],[61.25,9.1],[61.25,9.155],[60.05,9.155],[60.05,9.1],[58.75,9.1],[58.75,7.82],[58.87,7.82],[58.87,6.62],[61.68,6.62],[61.68,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 366</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:10.55m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: KN gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[52.87,42.96],[54.67,42.96],[54.67,37.1],[52.87,37.1],[52.87,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 320</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:40.65m2</li>" +
+                  "<li>Raumbez.: Lagerräume BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[27.88,42.96],[28.83,42.96],[28.83,43.14],[30.31,43.14],[30.31,42.96],[31,42.96],[31,40.14],[38.27,40.14],[38.27,37.1],[27.88,37.1],[27.88,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 461</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:49.94m2</li>" +
+                  "<li>Raumbez.: Velorampe</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 4.1 / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[3.512,9.622],[0.2,9.622],[0.2,5.43],[0.25,5.43],[0.25,5.18],[0.2,5.18],[0.2,3.198],[6.375,3.198],[6.375,3.301],[6.275,3.301],[6.275,3.501],[6.475,3.501],[6.475,3.301],[6.375,3.301],[6.375,3.198],[12.625,3.198],[12.625,3.301],[12.575,3.301],[12.575,3.501],[12.712,3.501],[12.712,6.32],[3.45,6.32],[3.45,6.54],[3.512,6.54],[3.512,7.19],[3.512,8.25],[3.512,9.622]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 183</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.21m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.65,9.1],[56.65,6.62],[58.75,6.62],[58.75,9.1],[56.65,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 125</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.69m2</li>" +
+                  "<li>Raumbez.: Putzraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[34.42,9.1],[36.33,9.1],[36.33,9.32],[37.53,9.32],[37.53,9.1],[37.687,9.1],[37.687,7.44],[34.42,7.44],[34.42,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 637</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:8.08m2</li>" +
+                  "<li>Raumbez.: Kühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[41.35,32.24],[43.93,32.24],[43.93,29.11],[41.35,29.11],[41.35,32.24]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 361</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:81.99m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[53.196,45.3],[53.196,43.14],[50.625,43.14],[50.625,43.165],[50.325,43.165],[50.325,43.14],[44.325,43.14],[44.325,43.165],[44.025,43.165],[44.025,43.14],[30.31,43.14],[28.83,43.14],[27.23,43.14],[25.75,43.14],[25.425,43.14],[25.425,43.165],[25.125,43.165],[25.125,43.14],[21.24,43.14],[19.76,43.14],[19.125,43.14],[19.125,43.165],[18.825,43.165],[18.825,43.14],[15.225,43.14],[15.225,45.3],[22.87,45.3],[24.35,45.3],[32.87,45.3],[34.35,45.3],[36.41,45.3],[37.89,45.3],[45.75,45.3],[47.23,45.3],[53.196,45.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 754</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.041,66.3],[28.691,66.3],[28.691,61.3],[31.041,61.3],[31.041,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 286</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:39.01m2</li>" +
+                  "<li>Raumbez.: Zuluft</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Kalksandstein</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[67.42,0.44],[67.42,6.23],[69.16,6.23],[69.16,5.099],[69.64,5.099],[69.64,8.009],[73.295,8.009],[73.295,0.699],[69.25,0.699],[69.25,0.35],[68.33,0.35],[68.33,0.44],[67.42,0.44]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 564</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.83m2</li>" +
+                  "<li>Raumbez.: Lift</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[12.58,30.655],[9.7,30.655],[9.7,28.63],[12.58,28.63],[12.58,30.655]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 531</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:19.38m2</li>" +
+                  "<li>Raumbez.: Loge</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden mit Teppich 20</li>" +
+                  "<li>Decke: her. Gipsdecke gelocht demontabel</li>" +
+                  "<li>Wand: Beton Typ 2+ / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,22.685],[12.8,22.685],[12.8,16.41],[9.975,16.41],[9.975,16.685],[9.7,16.685],[9.7,22.685]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 631</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:6.3m2</li>" +
+                  "<li>Raumbez.: Kühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.99,26.46],[59.63,26.46],[59.63,24.19],[56.99,24.19],[56.99,24.875],[56.65,24.875],[56.65,25.775],[56.99,25.775],[56.99,26.46]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 772</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:132.49m2</li>" +
+                  "<li>Raumbez.: Zufahrt</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[73.945,38.489],[79.245,38.489],[79.245,13.49],[73.946,13.49],[73.945,38.489]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 364</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:44.76m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[53.196,43.14],[53.196,45.3],[54.295,45.3],[54.295,46.585],[54.365,46.585],[54.365,46.78],[54.295,46.78],[54.295,49.46],[55.495,49.46],[55.495,46.78],[54.365,46.78],[54.365,46.585],[55.495,46.585],[55.495,45.3],[61.435,45.3],[61.435,45.48],[62.915,45.48],[62.915,45.3],[65.225,45.3],[65.225,42.085],[63.2,42.085],[63.2,43.14],[56.65,43.14],[56.65,42.84],[56.65,40.36],[56.65,40.14],[56.975,40.14],[56.975,38.84],[56.65,38.84],[56.65,38.52],[56.65,37.39],[56.65,36.92],[54.85,36.92],[54.85,43.14],[53.196,43.14]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 640</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.97m2</li>" +
+                  "<li>Raumbez.: Küchenmaterial</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.45,28.99],[31.45,29.06],[31.638,29.06],[31.638,32.18],[27.88,32.18],[27.88,28.99],[31.45,28.99]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 639</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.18m2</li>" +
+                  "<li>Raumbez.: Reinigungsmittel</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.638,32.18],[33.89,32.18],[33.89,28.99],[31.7,28.99],[31.7,29.06],[31.638,29.06],[31.638,32.18]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 572</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:127.7m2</li>" +
+                  "<li>Raumbez.: Eingangsraum</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Hartbeton geschliffen</li>" +
+                  "<li>Decke: her. Gipdsdecke gelocht</li>" +
+                  "<li>Wand: Gipsglattstrich / Beton Typ 4.1 / Leichtbauw.gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[18.975,6.595],[18.975,9.045],[18.825,9.045],[18.825,9.345],[18.975,9.345],[18.975,12.932],[18.888,12.932],[18.888,15.39],[18.8,15.39],[18.8,15.99],[20.626,15.99],[22.18,15.99],[22.18,21.822],[19.34,21.822],[19.34,22.89],[19.1,22.89],[19.1,22.765],[18.85,22.765],[18.85,23.015],[19.1,23.015],[19.1,22.89],[19.34,22.89],[19.34,24.168],[12.8,24.168],[12.8,22.685],[12.8,16.426],[12.8,10.62],[12.775,10.62],[12.775,9.32],[12.8,9.32],[12.8,6.59],[18.825,6.59],[18.825,6.595],[18.975,6.595]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 574</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:20.69m2</li>" +
+                  "<li>Raumbez.: Windfang/ Schleuse</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Schleusenteppich</li>" +
+                  "<li>Decke: her. Gipsdecke gelocht</li>" +
+                  "<li>Wand: Leichtbauw. gest. / Glas</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[12.8,6.59],[18.825,6.59],[18.825,6.295],[18.975,6.295],[18.975,3.272],[12.775,3.273],[12.775,3.501],[12.712,3.501],[12.712,6.32],[12.8,6.32],[12.8,6.59]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 633</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:138.44m2</li>" +
+                  "<li>Raumbez.: Produktion</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: her. Lüftungsdecke</li>" +
+                  "<li>Wand: Gipsglattstrich abwaschbar /  Fliesen / Beton Typ 4.1 farblos lasiert</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.65,27.22],[55.43,27.22],[55.43,24.032],[55.25,24.032],[55.25,27.04],[51.75,27.04],[51.75,24.032],[51.57,24.032],[51.57,27.22],[50.475,27.22],[50.475,26.695],[50.6,26.695],[50.6,26.445],[50.35,26.445],[50.35,26.695],[50.475,26.695],[50.475,27.22],[50.35,27.22],[50.35,27.21],[46.807,27.21],[46.808,22.89],[50.35,22.89],[50.35,23.015],[50.6,23.015],[50.6,22.765],[50.35,22.765],[50.35,22.89],[46.808,22.89],[46.808,12.945],[50.475,12.945],[50.475,15.39],[50.35,15.39],[50.35,15.64],[50.475,15.64],[50.475,19.085],[50.35,19.085],[50.35,19.335],[50.6,19.335],[50.6,19.085],[50.475,19.085],[50.475,15.64],[50.6,15.64],[50.6,15.39],[50.475,15.39],[50.475,12.945],[56.65,12.945],[56.65,27.22]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 643</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:17.87m2</li>" +
+                  "<li>Raumbez.: Economat</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[37.75,34],[37.75,34.07],[37.82,34.07],[37.82,36.92],[31.7,36.92],[31.7,34],[37.75,34]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 115</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:26.55m2</li>" +
+                  "<li>Raumbez.: WC H</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2+ / Fliesen / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[26.63,15.61],[26.63,18.21],[26.57,18.21],[26.408,18.21],[26.408,22.41],[26.408,22.51],[25.838,22.51],[25.838,26.172],[28.753,26.172],[28.752,15.61],[26.63,15.61]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 663</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.2m2</li>" +
+                  "<li>Raumbez.: Lift Gastro</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.87,30.18],[59.75,30.18],[59.75,27.68],[56.87,27.68],[56.87,30.18]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 465</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:20.18m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: PU-Gussbelag</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Leichtb. gestr./ Beton Typ 4.1</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[4.888,44.362],[6.312,44.362],[6.312,43.14],[6.25,43.14],[6.25,40.14],[12.8,40.14],[12.8,38.84],[9.4,38.84],[9.4,37.94],[4.888,37.94],[4.888,44.362]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 462</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:26.14m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Teppich</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 4.1 / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[0.25,11.78],[6.225,11.78],[6.225,11.63],[6.525,11.63],[6.525,11.78],[9.4,11.78],[9.4,10.62],[9.81,10.62],[10.94,10.62],[12.775,10.62],[12.775,9.32],[6.25,9.32],[6.25,9.257],[3.512,9.257],[3.512,9.622],[0.2,9.622],[0.2,11.655],[0.25,11.655],[0.25,11.78]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 751</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[23.481,66.3],[21.131,66.3],[21.131,61.3],[23.481,61.3],[23.481,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 743</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[23.48,54.79],[25.83,54.79],[25.83,49.79],[23.48,49.79],[23.48,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 755</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[33.391,61.3],[31.041,61.3],[31.041,66.3],[33.391,66.3],[33.391,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 769</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[48.511,61.3],[46.161,61.3],[46.161,66.3],[48.511,66.3],[48.511,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 753</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[28.181,61.3],[25.831,61.3],[25.831,66.3],[28.181,66.3],[28.181,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 766</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:16.56m2</li>" +
+                  "<li>Raumbez.: Mofa</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.86,56.99],[9.16,56.99],[9.16,49.79],[6.86,49.79],[6.86,56.99]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 909</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:20.11m2</li>" +
+                  "<li>Raumbez.: WC/Dusche D</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Beton Typ 4.1 / Leichtbauw. gestr. / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[4.46,49.21],[2.5,49.21],[2.5,49.01],[0.2,49.01],[0.2,44.4],[2.4,44.4],[2.4,44.362],[4.46,44.362],[4.46,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 568</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:38.54m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Hartbeton geschliffen</li>" +
+                  "<li>Decke: her. Gipsdecke gelocht</li>" +
+                  "<li>Wand: Leichtbauw. gestr./ Gipsglattstrich</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[15.2,33.512],[12.8,33.512],[12.8,37.39],[12.8,38.52],[12.8,38.84],[12.8,40.14],[12.8,43.14],[12.742,43.14],[12.742,48.91],[12.805,48.91],[12.805,49.21],[13.055,49.21],[13.055,49.46],[14.955,49.46],[14.955,49.21],[15.2,49.21],[15.2,45.3],[15.225,45.3],[15.225,43.14],[15.2,43.14],[15.2,33.512]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 189</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:2.98m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.47,9.1],[7.67,9.1],[7.67,6.62],[6.47,6.62],[6.47,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 322</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:63.18m2</li>" +
+                  "<li>Raumbez.: Post / Warenannahme</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[15.38,42.96],[18.825,42.96],[18.825,42.865],[19.125,42.865],[19.125,42.96],[19.76,42.96],[19.76,43.14],[21.24,43.14],[21.24,42.96],[22.47,42.96],[22.47,40.265],[19.125,40.265],[19.125,40.415],[18.825,40.415],[18.825,40.115],[19.125,40.115],[19.125,40.265],[22.47,40.265],[22.47,34.07],[15.38,34.07],[15.38,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 422</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:3.48m2</li>" +
+                  "<li>Raumbez.: Lager Freizeit</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Leichtb. gestr. / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[0.2,40.387],[1.555,40.387],[1.555,39.325],[1.63,39.325],[1.63,37.9],[0.2,37.9],[0.2,40.387]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 765</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[58.421,66.3],[56.071,66.3],[56.071,61.3],[58.421,61.3],[58.421,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 750</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[20.621,61.3],[18.271,61.3],[18.271,66.3],[20.621,66.3],[20.621,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 638</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:22m2</li>" +
+                  "<li>Raumbez.: Kühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[41.23,32.24],[41.23,29.11],[38.12,29.11],[38.12,29.18],[37.63,29.18],[37.63,29.11],[34.19,29.11],[34.19,32.24],[41.23,32.24]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 731</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.07,54.79],[58.421,54.79],[58.421,49.79],[56.07,49.79],[56.07,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 186</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:10.39m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.05,9.1],[34.3,9.1],[34.3,7.32],[37.625,7.32],[37.625,6.62],[31.05,6.62],[31.05,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 646</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:18.55m2</li>" +
+                  "<li>Raumbez.: Leergut</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.93,36.92],[53.29,36.92],[53.29,34],[50.6,34],[50.6,34.07],[50.35,34.07],[50.35,34],[46.93,34],[46.93,36.92]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 642</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:10.62m2</li>" +
+                  "<li>Raumbez.: Küchenmaterial</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.52,36.92],[27.88,36.92],[27.88,34],[31.45,34],[31.45,34.07],[31.52,34.07],[31.52,36.92]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 739</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[33.39,54.79],[35.74,54.79],[35.74,49.79],[33.39,49.79],[33.39,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 767</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:39.52m2</li>" +
+                  "<li>Raumbez.: Mofa</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[1.761,50.68],[4.061,50.68],[4.061,66.3],[1.761,66.3],[1.761,65.402],[1.511,65.402],[0.371,65.783],[-0.262,63.885],[1.511,63.294],[1.761,63.294],[1.761,50.68]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 581</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:3.25m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,23.92],[12.58,23.92],[12.58,22.79],[9.7,22.79],[9.7,23.92]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 120</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:37.8m2</li>" +
+                  "<li>Raumbez.: Spüle</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: her. Lüftungsdecke</li>" +
+                  "<li>Wand: Fliesen / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.7,22.453],[35.97,22.453],[35.97,13.931],[31.525,13.931],[31.525,15.39],[31.7,15.39],[31.7,15.64],[31.525,15.64],[31.525,22.24],[31.7,22.24],[31.7,22.453]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 112</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:24.88m2</li>" +
+                  "<li>Raumbez.: Pers.Effekte</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Hartbeton geschliffen</li>" +
+                  "<li>Decke: her. Metallraster</li>" +
+                  "<li>Wand: Gipsglattstrich / Leichtbauw. gest.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[18.888,15.39],[20.626,15.39],[20.626,15.99],[21.686,15.99],[21.686,15.39],[28.753,15.39],[28.752,12.932],[18.888,12.932],[18.888,15.39]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 759</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[43.301,61.3],[40.951,61.3],[40.951,66.3],[43.301,66.3],[43.301,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 664</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:14.94m2</li>" +
+                  "<li>Raumbez.: Treppenhaus</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Beton vor. gesch.</li>" +
+                  "<li>Decke: Treppenuntersicht Schalungsglatt</li>" +
+                  "<li>Wand: Beton Typ 2+</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[59.75,16.19],[56.87,16.19],[56.87,13.845],[58.225,13.845],[58.225,14.818],[58.395,14.818],[58.395,12.048],[58.225,12.048],[58.225,13.845],[56.87,13.845],[56.87,10.84],[59.75,10.84],[59.75,16.19]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 113</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.64m2</li>" +
+                  "<li>Raumbez.: WC D</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2+ farblos lasiert / Fliesen </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[22.52,21.842],[25.352,21.842],[25.352,18.21],[24.58,18.21],[24.58,15.61],[22.52,15.61],[22.52,21.842]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 562</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.83m2</li>" +
+                  "<li>Raumbez.: Lift</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,26.165],[12.58,26.165],[12.58,24.14],[9.7,24.14],[9.7,26.165]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 741</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[28.69,54.79],[31.04,54.79],[31.04,49.79],[28.69,49.79],[28.69,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 747</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:17.5m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.56,54.79],[13.06,54.79],[13.06,49.79],[9.56,49.79],[9.56,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 321</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:45.04m2</li>" +
+                  "<li>Raumbez.: Lagerräume BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[22.65,42.96],[25.125,42.96],[25.125,42.865],[25.425,42.865],[25.425,42.96],[25.75,42.96],[25.75,43.14],[27.23,43.14],[27.23,42.96],[27.7,42.96],[27.7,40.265],[25.425,40.265],[25.425,40.415],[25.125,40.415],[25.125,40.115],[25.425,40.115],[25.425,40.265],[27.7,40.265],[27.7,34.07],[22.65,34.07],[22.65,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 665</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:109.29m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Gipsglattstrich abwasch. / Glas / Beton Typ 4.1 farblos lasiert</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[43.787,28.81],[53.47,28.81],[53.47,32.36],[48.07,32.36],[48.07,28.81],[46.87,28.81],[46.87,32.36],[27.88,32.36],[27.88,33.82],[53.47,33.82],[53.47,36.92],[56.65,36.92],[56.65,29.77],[56.87,29.77],[56.87,28.125],[56.65,28.125],[56.65,27.22],[51.57,27.22],[50.35,27.22],[50.35,27.21],[46.807,27.21],[46.807,26.595],[46.47,26.595],[46.47,26.695],[46.22,26.695],[46.22,26.595],[43.787,26.595],[43.787,28.81]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 756</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[35.741,61.3],[33.391,61.3],[33.391,66.3],[35.741,66.3],[35.741,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 318</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.77m2</li>" +
+                  "<li>Raumbez.: Garderobe H</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Fliesen / KN gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[52.69,39.935],[50.4,39.935],[50.4,39.715],[47.84,39.715],[47.84,39.935],[46.93,39.935],[46.93,37.1],[52.69,37.1],[52.69,39.935]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 219</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:34.03m2</li>" +
+                  "<li>Raumbez.: Lagerraum ISC-EJPD</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[60.05,30.22],[63.045,30.22],[63.045,27.51],[63.225,27.51],[63.225,26.03],[63.045,26.03],[63.045,24.88],[62.925,24.88],[62.925,24.58],[63.045,24.58],[63.045,18.935],[60.05,18.935],[60.05,30.22]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 745</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[18.27,49.79],[20.62,49.79],[20.62,54.79],[18.27,54.79],[18.27,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 412</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:26.62m2</li>" +
+                  "<li>Raumbez.: Sanitätszimmer</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: PU-Gussbelag</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert / Hybridpaneel</li>" +
+                  "<li>Wand: Leichtbauw. gestr. / Beton Typ 4.1</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[0.2,16.096],[6.375,16.096],[6.375,11.93],[6.225,11.93],[6.225,11.78],[0.25,11.78],[0.25,11.905],[0.2,11.905],[0.2,16.096]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 212</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:64.38m2</li>" +
+                  "<li>Raumbez.: Testing Raum BIR Arbeitsplätze</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 75</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[65.405,36.465],[73.315,36.465],[73.315,28.315],[69.375,28.315],[69.375,31.055],[69.525,31.055],[69.525,31.355],[69.225,31.355],[69.225,31.055],[69.375,31.055],[69.375,28.315],[65.405,28.315],[65.405,36.465]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 313</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:36.89m2</li>" +
+                  "<li>Raumbez.: Lagerräume BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.51,49.21],[25.51,45.48],[32.87,45.48],[32.87,45.3],[34.35,45.3],[34.35,45.48],[35.33,45.48],[35.33,49.21],[25.51,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 734</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.16,49.79],[48.51,49.79],[48.51,54.79],[46.16,54.79],[46.16,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 907</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:61.25m2</li>" +
+                  "<li>Raumbez.: Notstromaggregat</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Kalksandstein</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[67.11,0.35],[56.85,0.35],[56.85,6.32],[67.11,6.32],[67.11,0.35]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 566</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.84m2</li>" +
+                  "<li>Raumbez.: Treppenhaus</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Beton vor. gesch.</li>" +
+                  "<li>Decke: Treppenuntersicht Schalungsglatt</li>" +
+                  "<li>Wand: Beton Typ 2+</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,38.62],[12.58,38.62],[12.58,35.752],[11.225,35.752],[11.225,37.275],[11.055,37.275],[11.055,34.505],[11.225,34.505],[11.225,35.752],[12.58,35.752],[12.58,33.12],[9.7,33.12],[9.7,38.62]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 763</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:53.08m2</li>" +
+                  "<li>Raumbez.: Parking Mofa</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.16,56.99],[6.86,56.99],[6.86,49.79],[1.761,49.79],[1.761,50.68],[4.061,50.68],[4.061,66.3],[6.861,66.3],[6.861,59.08],[9.161,59.08],[9.16,56.99]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 214</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:42.07m2</li>" +
+                  "<li>Raumbez.: Zentralreinigungraum BBL OM</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: PU-Gussbelag</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[65.405,49.21],[73.315,49.21],[73.315,43.88],[69.375,43.88],[69.375,44.005],[69.525,44.005],[69.525,44.305],[69.225,44.305],[69.225,44.005],[69.375,44.005],[69.375,43.88],[65.405,43.88],[65.405,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 683</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:2.18m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[45.987,32.18],[46.69,32.18],[46.69,31.645],[46.47,31.645],[46.47,31.77],[46.22,31.77],[46.22,31.52],[46.47,31.52],[46.47,31.645],[46.69,31.645],[46.69,31.37],[46.69,28.99],[45.987,28.99],[45.987,32.18]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 116</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:237.25m2</li>" +
+                  "<li>Raumbez.: Ausgabe</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Hartbeton geschliffen / Epoxi</li>" +
+                  "<li>Decke: her. Metallraster / her. Lüftungsdecke</li>" +
+                  "<li>Wand: Gipsglattstrich abwaschbar</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.807,17.815],[46.47,17.815],[46.47,17.94],[46.22,17.94],[46.22,17.69],[46.47,17.69],[46.47,17.815],[46.807,17.815],[46.807,15.515],[44.3,15.515],[44.3,15.64],[44.05,15.64],[44.05,15.39],[44.3,15.39],[44.3,15.515],[46.807,15.515],[46.807,12.933],[43.8,12.932],[43.8,12.933],[35.97,12.932],[35.97,15.515],[37.75,15.515],[37.75,15.39],[38,15.39],[38,15.64],[37.75,15.64],[37.75,15.515],[35.97,15.515],[35.97,22.365],[37.75,22.365],[37.75,22.24],[38,22.24],[38,22.49],[37.75,22.49],[37.75,22.365],[35.97,22.365],[35.97,22.453],[31.7,22.453],[31.7,22.515],[31.425,22.515],[31.425,22.24],[31.525,22.24],[31.525,15.64],[31.45,15.64],[31.45,15.39],[31.525,15.39],[31.525,12.932],[28.752,12.932],[28.753,28.81],[43.787,28.81],[43.787,26.595],[46.22,26.595],[46.22,26.42],[46.47,26.42],[46.47,26.595],[46.808,26.595],[46.807,22.365],[44.3,22.365],[44.3,22.49],[44.05,22.49],[44.05,22.24],[44.3,22.24],[44.3,22.365],[46.808,22.365],[46.807,17.815]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 215</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:94.67m2</li>" +
+                  "<li>Raumbez.: Archivräume ISC EJPD</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[60.05,18.755],[63.075,18.755],[63.075,18.405],[62.925,18.405],[62.925,18.105],[63.225,18.105],[63.225,18.405],[63.075,18.405],[63.075,18.755],[63.485,18.755],[63.485,18.935],[64.965,18.935],[64.965,18.755],[69.25,18.755],[69.25,6.5],[63.2,6.5],[63.2,11.63],[63.225,11.63],[63.225,11.93],[63.2,11.93],[63.2,12.32],[60.05,12.32],[60.05,18.755]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 565</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.83m2</li>" +
+                  "<li>Raumbez.: Lift</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,32.9],[12.58,32.9],[12.58,30.875],[9.7,30.875],[9.7,32.9]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 770</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[50.861,66.3],[48.511,66.3],[48.511,61.3],[50.861,61.3],[50.861,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 415</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:140.91m2</li>" +
+                  "<li>Raumbez.: Freizeitraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: PU-Gussbelag</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Leichtb. gestr./ Beton Typ 4.1 / Brüstung gipsglattstrich</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[0.2,37.9],[1.63,37.9],[1.63,37.945],[4.888,37.945],[4.888,37.94],[6.375,37.94],[6.375,37.83],[6.225,37.83],[6.225,37.53],[6.525,37.53],[6.525,37.83],[6.375,37.83],[6.375,37.94],[9.4,37.94],[9.4,31.205],[6.525,31.205],[6.525,31.355],[6.225,31.355],[6.225,31.055],[6.525,31.055],[6.525,31.205],[9.4,31.205],[9.4,24.73],[6.525,24.73],[6.525,24.88],[6.225,24.88],[6.225,24.58],[6.525,24.58],[6.525,24.73],[9.4,24.73],[9.4,22.572],[0.2,22.572],[0.2,24.605],[0.25,24.605],[0.25,24.855],[0.2,24.855],[0.2,31.08],[0.25,31.08],[0.25,31.33],[0.2,31.33],[0.2,37.9]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 383</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:4.84m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[10.7,42.84],[12.65,42.84],[12.65,40.36],[10.7,40.36],[10.7,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 635</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.63m2</li>" +
+                  "<li>Raumbez.: Putzraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh / Leichtbauw. gest.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[48.25,32.18],[50.662,32.18],[50.662,30.25],[50.6,30.25],[50.6,30.375],[50.35,30.375],[50.35,30.125],[50.6,30.125],[50.6,30.25],[50.662,30.25],[50.662,28.99],[48.25,28.99],[48.25,32.18]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 114</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:4.33m2</li>" +
+                  "<li>Raumbez.: WC IV</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[24.58,17.722],[26.63,17.722],[26.63,15.61],[25.34,15.61],[24.58,15.61],[24.58,17.722]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 266</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:82.2m2</li>" +
+                  "<li>Raumbez.: Korridor</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.975,40.14],[63.2,40.14],[63.2,42.085],[65.225,42.085],[65.225,39.55],[65.225,38.1],[65.225,18.935],[64.965,18.935],[63.485,18.935],[63.225,18.935],[63.225,26.03],[63.225,27.51],[63.225,30.4],[63.075,30.4],[63.075,31.055],[62.925,31.055],[62.925,31.355],[63.225,31.355],[63.225,31.055],[63.075,31.055],[63.075,30.4],[60.05,30.4],[60.05,30.81],[59.75,30.81],[59.75,32.785],[60.05,32.785],[60.05,37.39],[59.75,37.39],[59.75,37.68],[62.925,37.68],[62.925,37.53],[63.225,37.53],[63.225,37.83],[62.925,37.83],[62.925,37.68],[59.75,37.68],[59.75,38.52],[60.05,38.52],[60.05,38.84],[56.975,38.84],[56.975,40.14]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 903</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:0.26m2</li>" +
+                  "<li>Raumbez.: Schacht</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[2.3,49.21],[0.2,49.21],[0.2,49.085],[2.3,49.085],[2.3,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 417</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:26.47m2</li>" +
+                  "<li>Raumbez.: Garderobe - H</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Beton Typ 4.1 / Leichtbauw. gestr. / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.312,44.4],[6.312,43.14],[12.742,43.14],[12.742,48.91],[8.67,48.91],[8.67,44.4],[6.312,44.4]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 762</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:396.25m2</li>" +
+                  "<li>Raumbez.: Parking Auto</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[36.251,61.3],[43.301,61.3],[43.301,66.3],[43.811,66.3],[43.811,62.27],[43.706,62.27],[43.704,62.29],[43.7,62.309],[43.694,62.327],[43.685,62.345],[43.675,62.361],[43.662,62.376],[43.647,62.389],[43.631,62.4],[43.613,62.409],[43.594,62.415],[43.575,62.419],[43.556,62.42],[43.536,62.419],[43.517,62.415],[43.498,62.409],[43.481,62.4],[43.464,62.389],[43.45,62.376],[43.437,62.361],[43.426,62.345],[43.417,62.327],[43.411,62.309],[43.407,62.29],[43.406,62.27],[43.407,62.25],[43.411,62.231],[43.417,62.213],[43.426,62.195],[43.437,62.179],[43.45,62.164],[43.464,62.151],[43.481,62.14],[43.498,62.131],[43.517,62.125],[43.536,62.121],[43.556,62.12],[43.575,62.121],[43.594,62.125],[43.613,62.131],[43.631,62.14],[43.647,62.151],[43.662,62.164],[43.675,62.179],[43.685,62.195],[43.694,62.213],[43.7,62.231],[43.704,62.25],[43.706,62.27],[43.811,62.27],[43.811,61.3],[50.861,61.3],[50.861,66.3],[51.371,66.3],[51.371,62.27],[51.266,62.27],[51.264,62.29],[51.26,62.309],[51.254,62.327],[51.245,62.345],[51.235,62.361],[51.222,62.376],[51.207,62.389],[51.191,62.4],[51.173,62.409],[51.154,62.415],[51.135,62.419],[51.116,62.42],[51.096,62.419],[51.077,62.415],[51.058,62.409],[51.041,62.4],[51.024,62.389],[51.01,62.376],[50.997,62.361],[50.986,62.345],[50.977,62.327],[50.971,62.309],[50.967,62.29],[50.966,62.27],[50.967,62.25],[50.971,62.231],[50.977,62.213],[50.986,62.195],[50.997,62.179],[51.01,62.164],[51.024,62.151],[51.041,62.14],[51.058,62.131],[51.077,62.125],[51.096,62.121],[51.116,62.12],[51.135,62.121],[51.154,62.125],[51.173,62.131],[51.191,62.14],[51.207,62.151],[51.222,62.164],[51.235,62.179],[51.245,62.195],[51.254,62.213],[51.26,62.231],[51.264,62.25],[51.266,62.27],[51.371,62.27],[51.371,61.3],[58.421,61.3],[58.42,54.79],[56.07,54.79],[56.07,49.79],[55.445,49.79],[55.445,49.46],[54.345,49.46],[54.345,49.79],[53.72,49.79],[53.72,54.79],[51.37,54.79],[51.37,49.79],[50.86,49.79],[50.86,53.83],[50.966,53.83],[50.967,53.81],[50.971,53.791],[50.977,53.773],[50.986,53.755],[50.997,53.739],[51.01,53.724],[51.024,53.711],[51.041,53.7],[51.058,53.691],[51.077,53.685],[51.096,53.681],[51.116,53.68],[51.135,53.681],[51.154,53.685],[51.173,53.691],[51.191,53.7],[51.207,53.711],[51.222,53.724],[51.235,53.739],[51.245,53.755],[51.254,53.773],[51.26,53.791],[51.264,53.81],[51.266,53.83],[51.264,53.85],[51.26,53.869],[51.254,53.887],[51.245,53.905],[51.235,53.921],[51.222,53.936],[51.207,53.949],[51.191,53.96],[51.173,53.969],[51.154,53.975],[51.135,53.979],[51.116,53.98],[51.096,53.979],[51.077,53.975],[51.058,53.969],[51.041,53.96],[51.024,53.949],[51.01,53.936],[50.997,53.921],[50.986,53.905],[50.977,53.887],[50.971,53.869],[50.967,53.85],[50.966,53.83],[50.86,53.83],[50.86,54.79],[43.81,54.79],[43.81,49.79],[43.3,49.79],[43.3,53.83],[43.406,53.83],[43.407,53.81],[43.411,53.791],[43.417,53.773],[43.426,53.755],[43.437,53.739],[43.45,53.724],[43.464,53.711],[43.481,53.7],[43.498,53.691],[43.517,53.685],[43.536,53.681],[43.556,53.68],[43.575,53.681],[43.594,53.685],[43.613,53.691],[43.631,53.7],[43.647,53.711],[43.662,53.724],[43.675,53.739],[43.685,53.755],[43.694,53.773],[43.7,53.791],[43.704,53.81],[43.706,53.83],[43.704,53.85],[43.7,53.869],[43.694,53.887],[43.685,53.905],[43.675,53.921],[43.662,53.936],[43.647,53.949],[43.631,53.96],[43.613,53.969],[43.594,53.975],[43.575,53.979],[43.556,53.98],[43.536,53.979],[43.517,53.975],[43.498,53.969],[43.481,53.96],[43.464,53.949],[43.45,53.936],[43.437,53.921],[43.426,53.905],[43.417,53.887],[43.411,53.869],[43.407,53.85],[43.406,53.83],[43.3,53.83],[43.3,54.79],[36.25,54.79],[36.25,49.79],[35.74,49.79],[35.74,53.83],[35.846,53.83],[35.847,53.81],[35.851,53.791],[35.857,53.773],[35.866,53.755],[35.877,53.739],[35.89,53.724],[35.904,53.711],[35.921,53.7],[35.938,53.691],[35.957,53.685],[35.976,53.681],[35.996,53.68],[36.015,53.681],[36.034,53.685],[36.053,53.691],[36.071,53.7],[36.087,53.711],[36.102,53.724],[36.115,53.739],[36.125,53.755],[36.134,53.773],[36.14,53.791],[36.144,53.81],[36.146,53.83],[36.144,53.85],[36.14,53.869],[36.134,53.887],[36.125,53.905],[36.115,53.921],[36.102,53.936],[36.087,53.949],[36.071,53.96],[36.053,53.969],[36.034,53.975],[36.015,53.979],[35.996,53.98],[35.976,53.979],[35.957,53.975],[35.938,53.969],[35.921,53.96],[35.904,53.949],[35.89,53.936],[35.877,53.921],[35.866,53.905],[35.857,53.887],[35.851,53.869],[35.847,53.85],[35.846,53.83],[35.74,53.83],[35.74,54.79],[28.69,54.79],[28.69,49.79],[28.18,49.79],[28.18,53.83],[28.286,53.83],[28.287,53.81],[28.291,53.791],[28.297,53.773],[28.306,53.755],[28.317,53.739],[28.33,53.724],[28.344,53.711],[28.361,53.7],[28.378,53.691],[28.397,53.685],[28.416,53.681],[28.436,53.68],[28.455,53.681],[28.474,53.685],[28.493,53.691],[28.511,53.7],[28.527,53.711],[28.542,53.724],[28.555,53.739],[28.565,53.755],[28.574,53.773],[28.58,53.791],[28.584,53.81],[28.586,53.83],[28.584,53.85],[28.58,53.869],[28.574,53.887],[28.565,53.905],[28.555,53.921],[28.542,53.936],[28.527,53.949],[28.511,53.96],[28.493,53.969],[28.474,53.975],[28.455,53.979],[28.436,53.98],[28.416,53.979],[28.397,53.975],[28.378,53.969],[28.361,53.96],[28.344,53.949],[28.33,53.936],[28.317,53.921],[28.306,53.905],[28.297,53.887],[28.291,53.869],[28.287,53.85],[28.286,53.83],[28.18,53.83],[28.18,54.79],[21.13,54.79],[21.13,53.83],[21.025,53.83],[21.024,53.85],[21.02,53.869],[21.014,53.887],[21.005,53.905],[20.994,53.921],[20.981,53.936],[20.967,53.949],[20.95,53.96],[20.933,53.969],[20.914,53.975],[20.895,53.979],[20.875,53.98],[20.856,53.979],[20.836,53.975],[20.818,53.969],[20.8,53.96],[20.784,53.949],[20.769,53.936],[20.756,53.921],[20.745,53.905],[20.737,53.887],[20.73,53.869],[20.727,53.85],[20.725,53.83],[20.727,53.81],[20.73,53.791],[20.737,53.773],[20.745,53.755],[20.756,53.739],[20.769,53.724],[20.784,53.711],[20.8,53.7],[20.818,53.691],[20.836,53.685],[20.856,53.681],[20.875,53.68],[20.895,53.681],[20.914,53.685],[20.933,53.691],[20.95,53.7],[20.967,53.711],[20.981,53.724],[20.994,53.739],[21.005,53.755],[21.014,53.773],[21.02,53.791],[21.024,53.81],[21.025,53.83],[21.13,53.83],[21.13,49.79],[20.62,49.79],[20.62,54.79],[15.92,54.79],[15.92,49.79],[14.905,49.79],[14.905,49.46],[13.105,49.46],[13.105,49.79],[13.06,49.79],[13.06,53.83],[13.165,53.83],[13.166,53.81],[13.17,53.791],[13.177,53.773],[13.185,53.755],[13.196,53.739],[13.209,53.724],[13.224,53.711],[13.24,53.7],[13.258,53.691],[13.276,53.685],[13.296,53.681],[13.315,53.68],[13.335,53.681],[13.354,53.685],[13.373,53.691],[13.39,53.7],[13.407,53.711],[13.421,53.724],[13.434,53.739],[13.445,53.755],[13.454,53.773],[13.46,53.791],[13.464,53.81],[13.465,53.83],[13.464,53.85],[13.46,53.869],[13.454,53.887],[13.445,53.905],[13.434,53.921],[13.421,53.936],[13.407,53.949],[13.39,53.96],[13.373,53.969],[13.354,53.975],[13.335,53.979],[13.315,53.98],[13.296,53.979],[13.276,53.975],[13.258,53.969],[13.24,53.96],[13.224,53.949],[13.209,53.936],[13.196,53.921],[13.185,53.905],[13.177,53.887],[13.17,53.869],[13.166,53.85],[13.165,53.83],[13.06,53.83],[13.06,54.79],[9.56,54.79],[9.56,53.83],[9.471,53.83],[9.463,53.869],[9.457,53.887],[9.448,53.905],[9.437,53.921],[9.424,53.936],[9.41,53.949],[9.393,53.96],[9.376,53.969],[9.357,53.975],[9.338,53.979],[9.318,53.98],[9.299,53.979],[9.28,53.975],[9.261,53.969],[9.243,53.96],[9.227,53.949],[9.212,53.936],[9.199,53.921],[9.188,53.905],[9.18,53.887],[9.173,53.869],[9.17,53.85],[9.168,53.83],[9.17,53.81],[9.173,53.791],[9.18,53.773],[9.188,53.755],[9.199,53.739],[9.212,53.724],[9.227,53.711],[9.243,53.7],[9.261,53.691],[9.28,53.685],[9.299,53.681],[9.318,53.68],[9.338,53.681],[9.357,53.685],[9.376,53.691],[9.393,53.7],[9.41,53.711],[9.424,53.724],[9.437,53.739],[9.448,53.755],[9.457,53.773],[9.463,53.791],[9.471,53.83],[9.56,53.83],[9.56,49.79],[9.16,49.79],[9.16,56.99],[9.161,59.08],[9.161,62.27],[9.166,62.27],[9.167,62.25],[9.171,62.231],[9.177,62.213],[9.186,62.195],[9.197,62.179],[9.21,62.164],[9.224,62.151],[9.241,62.14],[9.258,62.131],[9.277,62.125],[9.296,62.121],[9.316,62.12],[9.335,62.121],[9.354,62.125],[9.373,62.131],[9.391,62.14],[9.407,62.151],[9.422,62.164],[9.435,62.179],[9.445,62.195],[9.454,62.213],[9.46,62.231],[9.464,62.25],[9.466,62.27],[9.464,62.29],[9.46,62.309],[9.454,62.327],[9.445,62.345],[9.435,62.361],[9.422,62.376],[9.407,62.389],[9.391,62.4],[9.373,62.409],[9.354,62.415],[9.335,62.419],[9.316,62.42],[9.296,62.419],[9.277,62.415],[9.258,62.409],[9.241,62.4],[9.224,62.389],[9.21,62.376],[9.197,62.361],[9.186,62.345],[9.177,62.327],[9.171,62.309],[9.167,62.29],[9.166,62.27],[9.161,62.27],[9.16,66.3],[13.571,66.3],[13.571,62.27],[13.468,62.27],[13.46,62.309],[13.454,62.327],[13.445,62.345],[13.435,62.361],[13.422,62.376],[13.407,62.389],[13.391,62.4],[13.373,62.409],[13.354,62.415],[13.335,62.419],[13.316,62.42],[13.296,62.419],[13.277,62.415],[13.258,62.409],[13.241,62.4],[13.224,62.389],[13.21,62.376],[13.197,62.361],[13.186,62.345],[13.177,62.327],[13.171,62.309],[13.167,62.29],[13.166,62.27],[13.167,62.25],[13.171,62.231],[13.177,62.213],[13.186,62.195],[13.197,62.179],[13.21,62.164],[13.224,62.151],[13.241,62.14],[13.258,62.131],[13.277,62.125],[13.296,62.121],[13.316,62.12],[13.335,62.121],[13.354,62.125],[13.373,62.131],[13.391,62.14],[13.407,62.151],[13.422,62.164],[13.435,62.179],[13.445,62.195],[13.454,62.213],[13.46,62.231],[13.468,62.27],[13.571,62.27],[13.571,61.3],[20.621,61.3],[20.621,66.3],[21.131,66.3],[21.131,62.27],[21.026,62.27],[21.024,62.29],[21.02,62.309],[21.014,62.327],[21.005,62.345],[20.995,62.361],[20.982,62.376],[20.967,62.389],[20.951,62.4],[20.933,62.409],[20.914,62.415],[20.895,62.419],[20.876,62.42],[20.856,62.419],[20.837,62.415],[20.818,62.409],[20.801,62.4],[20.784,62.389],[20.77,62.376],[20.757,62.361],[20.746,62.345],[20.737,62.327],[20.731,62.309],[20.727,62.29],[20.726,62.27],[20.727,62.25],[20.731,62.231],[20.737,62.213],[20.746,62.195],[20.757,62.179],[20.77,62.164],[20.784,62.151],[20.801,62.14],[20.818,62.131],[20.837,62.125],[20.856,62.121],[20.876,62.12],[20.895,62.121],[20.914,62.125],[20.933,62.131],[20.951,62.14],[20.967,62.151],[20.982,62.164],[20.995,62.179],[21.005,62.195],[21.014,62.213],[21.02,62.231],[21.024,62.25],[21.026,62.27],[21.131,62.27],[21.131,61.3],[28.181,61.3],[28.181,66.3],[28.691,66.3],[28.691,62.27],[28.586,62.27],[28.584,62.29],[28.58,62.309],[28.574,62.327],[28.565,62.345],[28.555,62.361],[28.542,62.376],[28.527,62.389],[28.511,62.4],[28.493,62.409],[28.474,62.415],[28.455,62.419],[28.436,62.42],[28.416,62.419],[28.397,62.415],[28.378,62.409],[28.361,62.4],[28.344,62.389],[28.33,62.376],[28.317,62.361],[28.306,62.345],[28.297,62.327],[28.291,62.309],[28.287,62.29],[28.286,62.27],[28.287,62.25],[28.291,62.231],[28.297,62.213],[28.306,62.195],[28.317,62.179],[28.33,62.164],[28.344,62.151],[28.361,62.14],[28.378,62.131],[28.397,62.125],[28.416,62.121],[28.436,62.12],[28.455,62.121],[28.474,62.125],[28.493,62.131],[28.511,62.14],[28.527,62.151],[28.542,62.164],[28.555,62.179],[28.565,62.195],[28.574,62.213],[28.58,62.231],[28.584,62.25],[28.586,62.27],[28.691,62.27],[28.691,61.3],[35.741,61.3],[35.741,66.3],[36.251,66.3],[36.251,62.27],[36.146,62.27],[36.144,62.29],[36.14,62.309],[36.134,62.327],[36.125,62.345],[36.115,62.361],[36.102,62.376],[36.087,62.389],[36.071,62.4],[36.053,62.409],[36.034,62.415],[36.015,62.419],[35.996,62.42],[35.976,62.419],[35.957,62.415],[35.938,62.409],[35.921,62.4],[35.904,62.389],[35.89,62.376],[35.877,62.361],[35.866,62.345],[35.857,62.327],[35.851,62.309],[35.847,62.29],[35.846,62.27],[35.847,62.25],[35.851,62.231],[35.857,62.213],[35.866,62.195],[35.877,62.179],[35.89,62.164],[35.904,62.151],[35.921,62.14],[35.938,62.131],[35.957,62.125],[35.976,62.121],[35.996,62.12],[36.015,62.121],[36.034,62.125],[36.053,62.131],[36.071,62.14],[36.087,62.151],[36.102,62.164],[36.115,62.179],[36.125,62.195],[36.134,62.213],[36.14,62.231],[36.144,62.25],[36.146,62.27],[36.251,62.27],[36.251,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 388</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.56m2</li>" +
+                  "<li>Raumbez.: Elektro</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 20</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[58.72,42.84],[61.66,42.84],[61.66,40.36],[61.225,40.36],[61.225,40.14],[60.025,40.14],[60.025,40.36],[58.72,40.36],[58.72,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 563</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.83m2</li>" +
+                  "<li>Raumbez.: Lift</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,28.41],[12.58,28.41],[12.58,26.385],[9.7,26.385],[9.7,28.41]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 389</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:3.24m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[62.98,42.84],[61.78,42.84],[61.78,40.14],[62.98,40.14],[62.98,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 645</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.23m2</li>" +
+                  "<li>Raumbez.: Kühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.63,33.94],[44.42,33.94],[44.42,34.19],[44.05,34.19],[44.05,36.78],[46.63,36.78],[46.63,33.94]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 413</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:59.92m2</li>" +
+                  "<li>Raumbez.: Backoffice</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Teppich</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert / Hybridpaneel</li>" +
+                  "<li>Wand: Leichtb. gestr./ Beton Typ 4.1</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[0.2,16.096],[0.2,18.13],[0.25,18.13],[0.25,18.38],[0.2,18.38],[0.2,22.572],[9.4,22.572],[9.4,18.42],[9.7,18.42],[9.7,17.21],[9.4,17.21],[9.4,16.096],[6.375,16.096],[6.375,18.105],[6.525,18.105],[6.525,18.405],[6.225,18.405],[6.225,18.105],[6.375,18.105],[6.375,16.096],[0.2,16.096]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 733</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[48.51,54.79],[50.86,54.79],[50.86,49.79],[48.51,49.79],[48.51,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 632</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:6.3m2</li>" +
+                  "<li>Raumbez.: Tageskühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.99,21.8],[56.99,22.485],[56.65,22.485],[56.65,23.385],[56.99,23.385],[56.99,24.07],[59.63,24.07],[59.63,21.8],[56.99,21.8]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 735</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[43.81,54.79],[46.16,54.79],[46.16,49.79],[43.81,49.79],[43.81,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 748</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[15.921,66.3],[13.571,66.3],[13.571,61.3],[15.921,61.3],[15.921,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 634</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:8.38m2</li>" +
+                  "<li>Raumbez.: Büro Küche</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh / Leichtbauw. gest.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[50.662,32.18],[53.29,32.18],[53.29,28.99],[50.662,28.99],[50.662,32.18]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 569</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:61.88m2</li>" +
+                  "<li>Raumbez.: Liftvorplatz</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Hartbeton geschliffen</li>" +
+                  "<li>Decke: her. Gipdsdecke gelocht</li>" +
+                  "<li>Wand: Beton Typ 4.1 / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[19.34,33.47],[18.335,33.47],[15.875,33.47],[15.46,33.47],[15.46,33.512],[12.8,33.512],[12.8,32.665],[12.58,32.665],[12.58,31.46],[12.8,31.46],[12.8,30.42],[12.58,30.42],[12.58,29.215],[12.8,29.215],[12.8,28.175],[12.58,28.175],[12.58,26.97],[12.8,26.97],[12.8,25.93],[12.58,25.93],[12.58,24.725],[12.8,24.725],[12.8,24.168],[19.34,24.168],[19.34,26.57],[19.1,26.57],[19.1,26.445],[18.85,26.445],[18.85,26.695],[19.1,26.695],[19.1,26.57],[19.34,26.57],[19.34,30.25],[19.1,30.25],[19.1,30.125],[18.85,30.125],[18.85,30.375],[19.1,30.375],[19.1,30.25],[19.34,30.25],[19.34,33.47]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 749</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[15.921,61.3],[18.271,61.3],[18.271,66.3],[15.921,66.3],[15.921,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 416</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:18.72m2</li>" +
+                  "<li>Raumbez.: Garderobe D</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Beton Typ 4.1 / Leichtbauw. gestr. / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[4.888,44.362],[4.887,43.19],[4.888,40.387],[0.2,40.387],[0.2,44.4],[2.4,44.4],[2.4,44.362],[4.888,44.362]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 752</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.831,61.3],[23.481,61.3],[23.481,66.3],[25.831,66.3],[25.831,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 758</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[40.951,66.3],[38.601,66.3],[38.601,61.3],[40.951,61.3],[40.951,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 764</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.071,61.3],[53.721,61.3],[53.721,66.3],[56.071,66.3],[56.071,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "",
+      "popupContent": "<strong>Raum: </strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:m2</li>" +
+                  "<li>Raumbez.: </li>" +
+                  "<li>SIA 416: </li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[50.325,40.415],[49.07,40.415],[49.07,40.115],[50.325,40.115],[50.325,40.415]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 661</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.37m2</li>" +
+                  "<li>Raumbez.: Treppenhaus</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Beton vor. gesch.</li>" +
+                  "<li>Decke: Treppenuntersicht Schalungsglatt</li>" +
+                  "<li>Wand: Beton Typ 2+</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.87,38.62],[59.75,38.62],[59.75,33.12],[56.87,33.12],[56.87,35.477],[58.225,35.477],[58.225,34.505],[58.395,34.505],[58.395,37.276],[58.225,37.276],[58.225,35.477],[56.87,35.477],[56.87,38.62]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 757</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[38.601,61.3],[36.251,61.3],[36.251,66.3],[38.601,66.3],[38.601,61.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 768</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:16.61m2</li>" +
+                  "<li>Raumbez.: Mofa</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.861,66.3],[9.161,66.3],[9.161,59.08],[6.861,59.08],[6.861,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 315</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:32.36m2</li>" +
+                  "<li>Raumbez.: Lagerraum ISC-EJPD</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[45.51,49.21],[54.115,49.21],[54.115,45.48],[47.23,45.48],[47.23,45.3],[45.75,45.3],[45.75,45.48],[45.51,45.48],[45.51,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 420</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:141.05m2</li>" +
+                  "<li>Raumbez.: WC IV</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[4.888,40.387],[4.888,39.225],[4.888,37.945],[1.63,37.945],[1.63,39.325],[2.005,39.325],[2.005,40.387],[4.888,40.387]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 411</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.44m2</li>" +
+                  "<li>Raumbez.: Abwart</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.25,9.257],[3.512,9.257],[3.512,6.54],[6.25,6.54],[6.25,9.257]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 771</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[53.721,66.3],[51.371,66.3],[51.371,61.3],[53.721,61.3],[53.721,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 908</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:19.86m2</li>" +
+                  "<li>Raumbez.: WC/Dusche H</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Fliesen</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Beton Typ 2 roh / Beton Typ 4.1 / Leichtbauw. gestr. / Fliesen</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[8.67,48.91],[8.67,44.4],[6.312,44.4],[6.312,44.362],[4.46,44.362],[4.46,49.21],[6.42,49.21],[6.42,49.01],[8.62,49.01],[8.62,48.91],[8.67,48.91]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 385</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:9.46m2</li>" +
+                  "<li>Raumbez.: Elektro</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 20</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[32.47,42.84],[36.18,42.84],[36.18,40.36],[35.325,40.36],[35.325,40.14],[34.125,40.14],[34.125,40.36],[32.47,40.36],[32.47,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 216</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:55.98m2</li>" +
+                  "<li>Raumbez.: Lagerraum ISC-EJPD</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[65.405,43.7],[73.315,43.7],[73.315,36.645],[69.375,36.645],[69.375,37.53],[69.525,37.53],[69.525,37.83],[69.225,37.83],[69.225,37.53],[69.375,37.53],[69.375,36.645],[65.405,36.645],[65.405,38.085],[65.225,38.085],[65.225,39.565],[65.405,39.565],[65.405,43.7]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 122</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:463.35m2</li>" +
+                  "<li>Raumbez.: Cafeteria Mahlzeiten</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Hartbeton geschliffen / Parkett</li>" +
+                  "<li>Decke: her. Lamellenrost</li>" +
+                  "<li>Wand: Leichtbauw. gestr. / Beton Typ 4.1 / Gipsglattstrich </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.65,0.25],[56.65,0.3],[56.67,0.3],[56.67,6.62],[56.65,6.62],[56.65,12.945],[46.807,12.945],[46.807,12.933],[35.97,12.933],[35.97,12.92],[35.237,12.92],[35.237,13.931],[32.255,13.931],[32.255,12.92],[31.525,12.92],[31.525,12.932],[18.975,12.932],[18.975,9.345],[19.125,9.345],[19.125,9.045],[18.975,9.045],[18.975,6.595],[19.125,6.595],[19.125,6.295],[18.975,6.295],[18.975,3.272],[19.15,3.272],[19.15,-0.08],[25.275,-0.08],[25.275,-0],[25.15,-0],[25.15,0.3],[25.275,0.3],[25.275,6.295],[25.125,6.295],[25.125,6.595],[25.275,6.595],[25.275,9.045],[25.125,9.045],[25.125,9.345],[25.425,9.345],[25.425,9.045],[25.275,9.045],[25.275,6.595],[25.425,6.595],[25.425,6.295],[25.275,6.295],[25.275,0.3],[25.4,0.3],[25.4,-0],[25.275,-0],[25.275,-0.08],[31.575,-0.08],[31.575,-0],[31.45,-0],[31.45,0.3],[31.7,0.3],[31.7,0.25],[37.75,0.25],[37.75,0.3],[37.875,0.3],[37.875,6.32],[31,6.32],[31,9.32],[38.45,9.32],[38.45,9.1],[37.687,9.1],[37.687,6.62],[38.45,6.62],[38.45,6.32],[37.875,6.32],[37.875,0.3],[38,0.3],[38,0.25],[44.05,0.25],[44.05,0.3],[44.175,0.3],[44.175,6.295],[44.025,6.295],[44.025,6.595],[44.175,6.595],[44.175,9.045],[44.025,9.045],[44.025,9.345],[44.325,9.345],[44.325,9.045],[44.175,9.045],[44.175,6.595],[44.325,6.595],[44.325,6.295],[44.175,6.295],[44.175,0.3],[44.3,0.3],[44.3,0.25],[50.35,0.25],[50.35,0.3],[50.475,0.3],[50.475,6.295],[50.325,6.295],[50.325,6.595],[50.475,6.595],[50.475,9.045],[50.325,9.045],[50.325,9.345],[50.625,9.345],[50.625,9.045],[50.475,9.045],[50.475,6.595],[50.625,6.595],[50.625,6.295],[50.475,6.295],[50.475,0.3],[50.6,0.3],[50.6,0.25],[56.65,0.25]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 685</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:2.02m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[59.75,26.76],[56.87,26.76],[56.87,27.46],[59.75,27.46],[59.75,26.76]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 737</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[38.6,54.79],[40.95,54.79],[40.95,49.79],[38.6,49.79],[38.6,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 732</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[51.37,49.79],[53.72,49.79],[53.72,54.79],[51.37,54.79],[51.37,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 740</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.04,49.79],[33.39,49.79],[33.39,54.79],[31.04,54.79],[31.04,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 736</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[40.95,49.79],[43.3,49.79],[43.3,54.79],[40.95,54.79],[40.95,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 746</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[15.92,54.79],[18.27,54.79],[18.27,49.79],[15.92,49.79],[15.92,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 414</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:13.03m2</li>" +
+                  "<li>Raumbez.: Vorzone Backoffice</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Teppich</li>" +
+                  "<li>Decke: Beton Typ 2 weiss lasiert</li>" +
+                  "<li>Wand: Beton Typ 4.1 / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.375,16.096],[9.4,16.096],[9.4,11.78],[6.525,11.78],[6.525,11.842],[6.525,11.93],[6.375,11.93],[6.375,16.096]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 381</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:10.13m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[6.47,42.84],[10.555,42.84],[10.555,40.36],[9.11,40.36],[7.91,40.36],[7.67,40.36],[6.47,40.36],[6.47,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 738</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[36.25,49.79],[38.6,49.79],[38.6,54.79],[36.25,54.79],[36.25,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 742</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.83,49.79],[28.18,49.79],[28.18,54.79],[25.83,54.79],[25.83,49.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 386</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.21m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[36.3,42.84],[38.4,42.84],[38.4,40.36],[36.3,40.36],[36.3,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 317</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.52m2</li>" +
+                  "<li>Raumbez.: Garderobe D</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: her. Streckmetall</li>" +
+                  "<li>Wand: Fliesen / KN gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.93,42.96],[50.325,42.96],[50.325,42.865],[50.625,42.865],[50.625,42.96],[52.69,42.96],[52.69,40.115],[50.625,40.115],[50.625,40.415],[50.4,40.415],[50.4,40.483],[48.97,40.483],[48.97,40.335],[47.84,40.335],[47.84,40.115],[46.93,40.115],[46.93,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 384</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:3.22m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[31.05,42.84],[32.35,42.84],[32.35,40.36],[31.05,40.36],[31.05,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 744</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[21.13,54.79],[23.48,54.79],[23.48,49.79],[21.13,49.79],[21.13,54.79]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 387</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:4.71m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[56.7,42.84],[58.6,42.84],[58.6,40.36],[56.7,40.36],[56.7,42.84]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 641</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:20.35m2</li>" +
+                  "<li>Raumbez.: Getränke-Lager Klimatisiert</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Epoxi</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Gipsglattstrich abwaschbar</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.42,33.89],[27.7,33.89],[27.7,28.81],[28.752,28.81],[28.753,26.172],[25.838,26.172],[25.838,26.235],[25.42,26.235],[25.42,33.89]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "HNF",
+      "popupContent": "<strong>Raum: 218</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:70.09m2</li>" +
+                  "<li>Raumbez.: Testing Raum BIR</li>" +
+                  "<li>SIA 416: HNF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 75</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[65.405,28.135],[69.375,28.135],[69.375,24.88],[69.225,24.88],[69.225,24.58],[69.525,24.58],[69.525,24.88],[69.375,24.88],[69.375,28.135],[73.315,28.135],[73.315,22.635],[72.615,22.635],[72.615,18.935],[65.405,18.935],[65.405,28.135]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 319</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:48.79m2</li>" +
+                  "<li>Raumbez.: Lagerräume BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh / Leichtbauw. gestr.</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[38.45,42.96],[41.54,42.96],[41.54,43.14],[43.02,43.14],[43.02,42.96],[44.025,42.96],[44.025,42.865],[44.325,42.865],[44.325,42.96],[46.75,42.96],[46.75,40.265],[44.325,40.265],[44.325,40.415],[44.025,40.415],[44.025,40.115],[44.325,40.115],[44.325,40.265],[46.75,40.265],[46.75,37.1],[38.45,37.1],[38.45,42.96]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "FF",
+      "popupContent": "<strong>Raum: 188</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:7.56m2</li>" +
+                  "<li>Raumbez.: Elektro</li>" +
+                  "<li>SIA 416: FF</li>" +
+                  "<li>Boden: Beton roh / Doppelboden 20</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[7.79,9.1],[8.2,9.1],[8.2,9.32],[9.4,9.32],[9.4,9.1],[10.73,9.1],[10.73,6.62],[7.79,6.62],[7.79,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 644</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.26m2</li>" +
+                  "<li>Raumbez.: Tiefkühlraum</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[38.2,36.72],[43.85,36.72],[43.85,34.02],[38.2,34.02],[38.2,36.72]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 187</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:4.46m2</li>" +
+                  "<li>Raumbez.: Steigzone</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[12.65,9.1],[10.85,9.1],[10.85,6.62],[12.65,6.62],[12.65,9.1]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 760</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:11.75m2</li>" +
+                  "<li>Raumbez.: Parkplatz</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Monobeton</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[46.161,66.3],[43.811,66.3],[43.811,61.3],[46.161,61.3],[46.161,66.3]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 904</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:1.15m2</li>" +
+                  "<li>Raumbez.: Schacht</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: </li>" +
+                  "<li>Decke: </li>" +
+                  "<li>Wand: </li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[12.68,49.21],[6.52,49.21],[6.52,49.085],[8.62,49.085],[8.62,49.21],[8.72,49.21],[8.72,48.985],[12.68,48.985],[12.68,49.21]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "VF",
+      "popupContent": "<strong>Raum: 561</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:15.41m2</li>" +
+                  "<li>Raumbez.: Treppenhaus</li>" +
+                  "<li>SIA 416: VF</li>" +
+                  "<li>Boden: Beton vor. gesch.</li>" +
+                  "<li>Decke: Treppenuntersicht Schalungsglatt</li>" +
+                  "<li>Wand: Beton Typ 2+</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[9.7,16.19],[12.58,16.19],[12.58,13.295],[11.225,13.295],[11.225,14.818],[11.055,14.818],[11.055,12.048],[11.225,12.048],[11.225,13.295],[12.58,13.295],[12.58,10.84],[9.7,10.84],[9.7,16.19]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 312</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:37.38m2</li>" +
+                  "<li>Raumbez.: Lagerräume BIT</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Zementüberzug</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: Beton Typ 2 / KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[25.33,45.48],[24.35,45.48],[24.35,45.3],[22.87,45.3],[22.87,45.48],[15.38,45.48],[15.38,49.21],[25.33,49.21],[25.33,45.48]]]}
+  },
+
+
+ {
+    "type": "Feature",
+    "properties": {
+      "name": "NNF",
+      "popupContent": "<strong>Raum: 636</strong><br>" +
+                  "<p>Zusätzliche Details über den Raum:</p>" +
+                  "<ul>" +
+                  "<li>Fläche:5.1m2</li>" +
+                  "<li>Raumbez.: Kühlraum</li>" +
+                  "<li>SIA 416: NNF</li>" +
+                  "<li>Boden: Beton abtaloschiert</li>" +
+                  "<li>Decke: Beton Typ 2 roh</li>" +
+                  "<li>Wand: KN roh</li>" +
+                  "</ul>",
+    },
+    "geometry": 
+      {"type":"Polygon","coordinates":[[[44.05,32.24],[45.687,32.24],[45.687,29.11],[44.42,29.11],[44.42,29.18],[44.05,29.18],[44.05,32.24]]]}
+  },
+
+
+
+// ADD FME ISSUES HERE 
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 2.1 - Referenzpunkte</strong><br>" +
+              "<p>Referenzpunkte innerhalb der Datei</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Text der Referenzkoordinaten weicht von den Planungskoordinaten ab</li>" +
+              "<li><strong>Inhalt:</strong> x: 56.87 != 0, y: 32.9 != 0</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/zeichnungsmassstab/check-2.1'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [56.869999984935845, 32.8999999902143],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Parking Auto: 1502.AA.00.762 != -1.762</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [33.790500520430854, 57.87997512772948],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Mofa: 1502.AA.00.768 != 181-186</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [8.010567421721532, 62.68999997319158],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>WC/Dusche H: 1502.AA.00.908 != 00.417</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [6.564999901702869, 46.78624998076729],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>WC/Dusche D: 1502.AA.00.909 != 00.416</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [2.3299999952229893, 46.78624998076729],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 16.5 - Raumfläche</strong><br>" +
+              "<p>Die Raumfläche entspricht dem Flächenwert des Raum-Polygons</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche</li>" +
+              "<li><strong>Inhalt:</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>00.665: Korridor: 109.29 m2 != 90.12 m2 -> -19.2 m2</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [42.37499998640268, 31.757485317592668],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 16.5 - Raumfläche</strong><br>" +
+              "<p>Die Raumfläche entspricht dem Flächenwert des Raum-Polygons</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche</li>" +
+              "<li><strong>Inhalt:</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>: Schacht: 26.27 m2 != 2.74 m2 -> -23.5 m2</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [25.604999996356824, 22.02494979131226],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 15.3 - Polygon-Prüfung pro Raum</strong><br>" +
+              "<p>1 Polygon pro Raum auf der Ebene R_00104_R1_NGF-POLYGON</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Ungleiche Anzahl von Raumstempeln zu Raumpolygonen</li>" +
+              "<li><strong>Inhalt:</strong> Ungleiche Anzahl von Raumstempeln zu Raumpolygonen: 1</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/inhaltsverzeichnis/raumpolygon/check-15.3'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [49.69749999381704, 40.264999987771546],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 16.5 - Raumfläche</strong><br>" +
+              "<p>Die Raumfläche entspricht dem Flächenwert des Raum-Polygons</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche</li>" +
+              "<li><strong>Inhalt:</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>00.561: Treppenhaus: 15.41 m2 != 14.94 m2 -> -0.5 m2</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [11.139995285520362, 13.514999998692268],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Testing Raum BIR Arbeitsplätze: 1502.AA.00.212 != 00.217</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [69.36000356505068, 32.3897950493393],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Mofa: 1502.AA.00.766 != 175-180</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [8.010433619498093, 53.39000086879544],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Parking Mofa: 1502.AA.00.763 != -1.761</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [5.460567421814729, 58.045000420774215],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Zufahrt: 1502.AA.00.772 != -1.763</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [76.59500460518595, 25.98933130059232],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 16.5 - Raumfläche</strong><br>" +
+              "<p>Die Raumfläche entspricht dem Flächenwert des Raum-Polygons</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche</li>" +
+              "<li><strong>Inhalt:</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>00.420: WC IV: 141.05 m2 != 7.56 m2 -> -133.5 m2</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [3.258990881068681, 39.16624910883166],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "error",
+      "popupContent": "<strong>Check: 16.2 - AOID zur Spiegelung der Blockraum-ID</strong><br>" +
+              "<p>Jeder Raum-AOID muss mit der Blockraum-ID übereinstimmen</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Fehler</li>" +
+              "<li><strong>Nachricht</strong> AOID weicht von RNR1 ab</li>" +
+              "<li><strong>Inhalt:</strong> AOID weicht von RNR1 ab: <br>Mofa: 1502.AA.00.767 != 181-193</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.2'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [1.8991942684580327, 58.489999973094584],}
+    },
+
+
+{
+    "type": "Feature",
+    "properties": {
+      "name": "warning",
+      "popupContent": "<strong>Check: 16.5 - Raumfläche</strong><br>" +
+              "<p>Die Raumfläche entspricht dem Flächenwert des Raum-Polygons</p>" +
+              "<ul>" +
+              "<li><strong>Status</strong> Warnung</li>" +
+              "<li><strong>Nachricht</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche</li>" +
+              "<li><strong>Inhalt:</strong> Flächenabweichung zwischen Raumfläche und berechneter Fläche: <br>00.566: Treppenhaus: 15.84 m2 != 15.37 m2 -> -0.5 m2</li>" +
+              "</ul>" +
+              "Mehr Info <a href='https://built-analytics.gitbook.io/dwg-checker/raumstempel/check-16.5'>Wiki Link</a>",
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [11.139999992456291, 35.86999998913651],}
+    },
+
+
+  
+  
+// You can continue adding more features here
+]
+}, 
+
+
+{
+          onEachFeature: function (feature, layer) {
+              layer.bindPopup(feature.properties.popupContent);
+          },
+
+
+          style: function(feature) {
+      // This style function is called for non-Point features
+      if (feature.geometry.type !== 'Point') {
+          return {
+              color: "#1c2228",// incase you want the same color as feature // featureColors[feature.properties.name], // Outline color for polygons/lines
+              fillColor: featureColors[feature.properties.name], // Dynamically set fill color based on 'name' property
+              weight: 0.5, // Outline thickness
+              opacity:0.7, // Outline opacity
+              fillOpacity: 0.8 // Fill opacity
+          };
+      }
+  },
+  pointToLayer: function (feature, latlng) {
+  return L.circleMarker(latlng, {
+      radius: 10, // Increase the radius for a bolder appearance
+      fillColor: featureColors[feature.properties.name], // Use a vibrant, contemporary color
+      color: "#ffffff", // White border for contrast
+      weight: 1.5, // Thicker border for emphasis
+      opacity: 1, // Fully opaque border
+      fillOpacity: 0.8 // Slightly transparent fill for depth
+  });
+}
+}).addTo(map);
+          
+       map.fitBounds(layer.getBounds());
+      
+</script>
+
+</body>
+</html>
